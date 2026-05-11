@@ -101,20 +101,34 @@ function safeContent(input = {}) {
   };
 }
 
-export async function onRequestGet({ env }) {
+function readRequestScope(request) {
+  const url = new URL(request.url);
+  return {
+    pagePath: (url.searchParams.get("pagePath") || request.headers.get("x-act4-page-path") || "").trim(),
+    moduleKey: (url.searchParams.get("module") || request.headers.get("x-act4-module") || "").trim(),
+    action: (url.searchParams.get("action") || request.headers.get("x-act4-action") || "").trim(),
+    columnId: (url.searchParams.get("columnId") || request.headers.get("x-act4-column-id") || "").trim(),
+  };
+}
+
+export async function onRequestGet({ request, env }) {
   const stored = await env.ACT4_CONTENT?.get(CONTENT_KEY);
-  if (!stored) return json(defaultContent);
-  return json(safeContent(JSON.parse(stored)));
+  const scope = readRequestScope(request);
+  const headers = scope.pagePath ? { "X-Act4-Page-Path": scope.pagePath } : {};
+  if (!stored) return json(defaultContent, { headers });
+  return json(safeContent(JSON.parse(stored)), { headers });
 }
 
 export async function onRequestPut({ request, env }) {
   const blocked = await requireAuth(request, env);
   if (blocked) return blocked;
+  const scope = readRequestScope(request);
+  if (!scope.pagePath) return json({ error: "Missing pagePath" }, { status: 400 });
   const body = await request.json().catch(() => ({}));
   const content = {
     ...safeContent(body),
     updatedAt: new Date().toISOString(),
   };
   await env.ACT4_CONTENT.put(CONTENT_KEY, JSON.stringify(content));
-  return json({ ok: true, content });
+  return json({ ok: true, content, scope });
 }

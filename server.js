@@ -50,6 +50,15 @@ function requireAuth(req, res, next) {
   return next();
 }
 
+function readRequestScope(req) {
+  return {
+    pagePath: String(req.query.pagePath || req.get("x-act4-page-path") || "").trim(),
+    moduleKey: String(req.query.module || req.get("x-act4-module") || "").trim(),
+    action: String(req.query.action || req.get("x-act4-action") || "").trim(),
+    columnId: String(req.query.columnId || req.get("x-act4-column-id") || "").trim(),
+  };
+}
+
 function makeId(value = "item") {
   return String(value)
     .trim()
@@ -220,17 +229,21 @@ app.post("/api/logout", (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/content", async (_req, res) => {
+app.get("/api/content", async (req, res) => {
+  const scope = readRequestScope(req);
+  if (scope.pagePath) res.set("X-Act4-Page-Path", scope.pagePath);
   res.json(await readContent());
 });
 
 app.put("/api/content", requireAuth, async (req, res) => {
+  const scope = readRequestScope(req);
+  if (!scope.pagePath) return res.status(400).json({ error: "Missing pagePath" });
   const content = {
     ...safeContent(req.body || {}),
     updatedAt: new Date().toISOString(),
   };
   await writeContent(content);
-  res.json({ ok: true, content });
+  res.json({ ok: true, content, scope });
 });
 
 app.post("/api/upload", requireAuth, upload.single("image"), (req, res) => {

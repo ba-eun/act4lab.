@@ -1503,6 +1503,93 @@ svg {
   background-size: 48px 48px;
 }
 
+.front-admin-toolbar {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 240;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: min(520px, calc(100vw - 28px));
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.28);
+}
+
+.front-admin-toolbar button,
+.front-admin-toolbar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 0 9px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.front-admin-toolbar button {
+  cursor: pointer;
+}
+
+.front-admin-toolbar button:hover,
+.front-admin-toolbar button.active {
+  border-color: rgba(158, 203, 255, 0.72);
+  background: rgba(158, 203, 255, 0.16);
+  color: #fff;
+}
+
+.front-admin-toolbar span {
+  max-width: 240px;
+  color: var(--primary-2);
+}
+
+.admin-breadcrumb {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--soft-line);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.admin-breadcrumb .container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.admin-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-breadcrumb a:not(:last-child)::after {
+  content: "/";
+  color: rgba(158, 203, 255, 0.56);
+}
+
+.admin-breadcrumb a[aria-current="page"] {
+  color: #fff;
+}
+
 .admin-floating-toolbar {
   position: sticky;
   top: 0;
@@ -1603,8 +1690,12 @@ svg {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 4px;
-  opacity: 0.2;
+  opacity: 0.28;
   transition: opacity 0.2s ease;
+}
+
+.front-admin-editable > .admin-inline-controls {
+  opacity: 0.78;
 }
 
 .admin-editable:hover > .admin-inline-controls,
@@ -1617,17 +1708,25 @@ svg {
   align-items: center;
   gap: 4px;
   min-height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.44);
   padding: 0 8px;
-  background: #fff;
-  color: #000;
+  background: rgba(0, 0, 0, 0.58);
+  color: #fff;
   font-size: 0.72rem;
   font-weight: 900;
   cursor: pointer;
+  backdrop-filter: blur(8px);
 }
 
 .admin-inline-controls button:hover {
-  background: var(--primary-2);
+  border-color: var(--primary-2);
+  background: rgba(158, 203, 255, 0.92);
+  color: #000;
+}
+
+.admin-inline-controls button.is-disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
 }
 
 .admin-section-tools {
@@ -2003,6 +2102,13 @@ svg {
 
   .admin-inline-controls {
     opacity: 1;
+  }
+
+  .front-admin-toolbar {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
   }
 
   .admin-toolbar {

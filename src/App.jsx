@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, ImagePlus, Loader2, LogOut, Menu, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Eye, ImagePlus, Loader2, LogOut, Menu, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
@@ -31,6 +31,20 @@ const boardSections = {
 
 const ContentContext = createContext(defaultContent);
 const ContentActionsContext = createContext({ setContentFromCms: () => {}, refreshContent: async () => {} });
+const AdminContext = createContext({
+  authenticated: false,
+  authChecked: false,
+  editMode: false,
+  saving: false,
+  message: "",
+  setAuthenticated: () => {},
+  setEditMode: () => {},
+  openModal: () => {},
+  showMessage: () => {},
+  persistScopedContent: async () => {},
+  uploadImage: async () => {},
+  logout: async () => {},
+});
 const CONTENT_UPDATED_EVENT = "act4-content-updated";
 
 function makeId(value = "item") {
@@ -46,8 +60,38 @@ function normalizePath(path) {
   return path.replace(/\/$/, "") || "/";
 }
 
+function rawCurrentPath() {
+  return normalizePath(window.location.pathname);
+}
+
+function isAdminRoute(path = rawCurrentPath()) {
+  const normalized = normalizePath(path);
+  return normalized === "/admin" || normalized.startsWith("/admin/");
+}
+
+function stripAdminPath(path = rawCurrentPath()) {
+  const normalized = normalizePath(path);
+  if (normalized === "/admin") return "/";
+  if (normalized.startsWith("/admin/")) return normalizePath(normalized.slice("/admin".length));
+  return normalized;
+}
+
+function adminPathFor(path = "/") {
+  const normalized = normalizePath(path);
+  return normalized === "/" ? "/admin" : `/admin${normalized}`;
+}
+
+function siteHref(path = "/") {
+  if (!path || path.startsWith("#") || /^https?:\/\//i.test(path)) return path;
+  return isAdminRoute() ? adminPathFor(path) : path;
+}
+
+function pathPartsFrom(path) {
+  return normalizePath(path).split("/").filter(Boolean);
+}
+
 function pathParts() {
-  return normalizePath(window.location.pathname).split("/").filter(Boolean);
+  return pathPartsFrom(stripAdminPath());
 }
 
 function useSiteContent() {
@@ -58,6 +102,14 @@ function useContentActions() {
   return useContext(ContentActionsContext);
 }
 
+function useAdminSession() {
+  return useContext(AdminContext);
+}
+
+function currentPagePath() {
+  return stripAdminPath();
+}
+
 function getBoardItems(content, section) {
   const key = boardSections[section]?.dataKey || section;
   return content.board?.[key] || [];
@@ -65,6 +117,10 @@ function getBoardItems(content, section) {
 
 function findById(items, id, labelKey = "title") {
   return items.find((item) => item.id === id || makeId(item[labelKey]) === id);
+}
+
+function findIndexById(items, id, labelKey = "title") {
+  return items.findIndex((item) => item.id === id || makeId(item[labelKey]) === id);
 }
 
 function hasText(value) {
@@ -188,7 +244,8 @@ function WebGLVisual() {
 function Header() {
   const [open, setOpen] = useState(false);
   const content = useSiteContent();
-  const path = normalizePath(window.location.pathname);
+  const adminRoute = isAdminRoute();
+  const path = stripAdminPath();
   const topLine = content.site.topLine.replace(/^ACT IV\s*/i, "");
 
   return (
@@ -197,12 +254,12 @@ function Header() {
         <span>ACT IV</span> {topLine}
       </div>
       <div className="container head-wrap">
-        <a href="/" className="logo" aria-label="ACT IV home">
+        <a href={adminRoute ? "/admin" : "/"} className="logo" aria-label="ACT IV home">
           <img src={content.site.logo || "/logo2.png"} alt="ACT IV Future Visual Lab" />
         </a>
         <nav className="nav" aria-label="Primary navigation">
           {navItems.map((item) => (
-            <a className={path === item.path || path.startsWith(`${item.path}/`) ? "active" : ""} key={item.label} href={item.path}>
+            <a className={path === item.path || path.startsWith(`${item.path}/`) ? "active" : ""} key={item.label} href={adminRoute ? adminPathFor(item.path) : item.path}>
               {item.label}
             </a>
           ))}
@@ -222,14 +279,14 @@ function Header() {
           </button>
           {navItems.map((item, index) => (
             <div className="mobile-panel-item" key={item.label}>
-              <a className="mobile-panel-main" href={item.path}>
+              <a className="mobile-panel-main" href={adminRoute ? adminPathFor(item.path) : item.path}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 {item.label}
               </a>
               {item.children ? (
                 <div className="mobile-panel-sub">
                   {item.children.map((child) => (
-                    <a key={child.label} href={child.path}>
+                    <a key={child.label} href={adminRoute ? adminPathFor(child.path) : child.path}>
                       {child.label}
                     </a>
                   ))}
@@ -247,7 +304,7 @@ function MainTitle({ children, href = "#" }) {
   return (
     <div className="main-title">
       <h2>{children}</h2>
-      <a href={href} aria-label={`${children} more`}>
+      <a href={siteHref(href)} aria-label={`${children} more`}>
         <ArrowRight size={28} />
       </a>
     </div>
@@ -292,9 +349,16 @@ function PageShell({ title, children }) {
 
 function HomePage() {
   const content = useSiteContent();
-  const news = visibleBoardTextItems(content, "news");
-  const works = visibleWorks(content.works);
-  const projects = visibleBoardTextItems(content, "project");
+  const editor = useScopedContentEditor();
+  const news = getBoardItems(content, "news")
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
+  const works = (content.works || [])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["image", "title", "date", "text", "people", "body"]));
+  const projects = getBoardItems(content, "project")
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
   useReveal();
   return (
     <main id="top" className="main">
@@ -321,26 +385,39 @@ function HomePage() {
         </figure>
       </section>
 
-      <div className="lab-intro container reveal-section">
+      <AdminEditable
+        className="lab-intro container reveal-section"
+        onEdit={editor.openHomeEditor}
+        onAdd={editor.addSingle}
+        onDelete={editor.clearHomeIntro}
+        addDisabledMessage={editor.singleItemMessage}
+      >
         {content.homeIntro.filter(hasText).map((paragraph) => (
           <p className="reveal-item" key={paragraph}>
             {paragraph}
           </p>
         ))}
-      </div>
+      </AdminEditable>
 
       <div className="mb-latest container">
         <section className="news reveal-section">
           <MainTitle href="/board/news">News</MainTitle>
           <ul className="news-list">
-            {news.map((item) => (
-              <li className="reveal-item" key={item.id || item.title}>
-                <a href={`/board/news/${item.id || makeId(item.title)}`}>
+            {news.map(({ item, index }) => (
+              <AdminEditable
+                as="li"
+                className="reveal-item"
+                key={item.id || item.title}
+                onEdit={() => editor.openBoardEditor("news", item, index)}
+                onAdd={() => editor.openBoardEditor("news")}
+                onDelete={() => editor.removeBoardItem("news", index)}
+              >
+                <a href={siteHref(`/board/news/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
                   {hasText(item.intro || item.body) ? <span className="cont">{item.intro || item.body}</span> : null}
                   {hasText(item.date) ? <span className="date">{item.date}</span> : null}
                 </a>
-              </li>
+              </AdminEditable>
             ))}
           </ul>
         </section>
@@ -348,9 +425,16 @@ function HomePage() {
         <section className="exhibition reveal-section">
           <MainTitle href="/works">Works</MainTitle>
           <ul className="exhibition-list">
-            {works.map((item) => (
-              <li className="reveal-item" key={item.id || item.title}>
-                <a href={`/works/${item.id || makeId(item.title)}`}>
+            {works.map(({ item, index }) => (
+              <AdminEditable
+                as="li"
+                className="reveal-item"
+                key={item.id || item.title}
+                onEdit={() => editor.openWorkEditor(item, index)}
+                onAdd={() => editor.openWorkEditor()}
+                onDelete={() => editor.removeWork(index)}
+              >
+                <a href={siteHref(`/works/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) || hasText(item.date) ? (
                     <div className="item">
                       {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
@@ -363,10 +447,10 @@ function HomePage() {
                     </span>
                   ) : null}
                 </a>
-              </li>
+              </AdminEditable>
             ))}
           </ul>
-          <a className="more-btn" href="/works">
+          <a className="more-btn" href={siteHref("/works")}>
             查看全部作品 <ArrowRight size={22} />
           </a>
         </section>
@@ -374,12 +458,19 @@ function HomePage() {
         <section className="project reveal-section">
           <MainTitle href="/board/project">Project</MainTitle>
           <ul className="project-list">
-            {projects.map((item) => (
-              <li className="reveal-item" key={item.id || item.title}>
-                <a href={`/board/project/${item.id || makeId(item.title)}`}>
+            {projects.map(({ item, index }) => (
+              <AdminEditable
+                as="li"
+                className="reveal-item"
+                key={item.id || item.title}
+                onEdit={() => editor.openBoardEditor("projects", item, index)}
+                onAdd={() => editor.openBoardEditor("projects")}
+                onDelete={() => editor.removeBoardItem("projects", index)}
+              >
+                <a href={siteHref(`/board/project/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
                 </a>
-              </li>
+              </AdminEditable>
             ))}
           </ul>
         </section>
@@ -390,18 +481,33 @@ function HomePage() {
 
 function AboutPage() {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
   const sections = content.about.sections
-    .map((section) => ({ ...section, paragraphs: (section.paragraphs || []).filter(hasText) }))
-    .filter((section) => hasText(section.title) || section.paragraphs.length);
+    .map((section, index) => ({ section: { ...section, paragraphs: (section.paragraphs || []).filter(hasText) }, index }))
+    .filter(({ section }) => hasText(section.title) || section.paragraphs.length);
   return (
     <PageShell title="About LAB">
       <div className="about-lab">
-        <div className="sub-slogan">
+        <AdminEditable
+          className="sub-slogan"
+          onEdit={editor.openAboutHeadingEditor}
+          onAdd={editor.addSingle}
+          onDelete={editor.denyDelete}
+          addDisabledMessage={editor.singleItemMessage}
+          deleteDisabledMessage={editor.fixedModuleMessage}
+        >
           {hasText(content.about.label) ? <p>{content.about.label}</p> : null}
           {hasText(content.about.title) ? <p>{content.about.title}</p> : null}
-        </div>
-        {sections.map((section) => (
-          <section className="cont-group reveal-section" key={section.number}>
+        </AdminEditable>
+        {sections.map(({ section, index }) => (
+          <AdminEditable
+            as="section"
+            className="cont-group reveal-section"
+            key={`${section.number}-${index}`}
+            onEdit={() => editor.openAboutSectionEditor(section, index)}
+            onAdd={() => editor.openAboutSectionEditor()}
+            onDelete={() => editor.removeAboutSection(index)}
+          >
             {hasText(section.number) ? <p className="num reveal-item">{section.number}</p> : null}
             {hasText(section.title) ? <p className="subj reveal-item">{section.title}</p> : null}
             <div className="reveal-item">
@@ -409,7 +515,7 @@ function AboutPage() {
                 <p key={paragraph}>{paragraph}</p>
               ))}
             </div>
-          </section>
+          </AdminEditable>
         ))}
         <div className="object-band" aria-hidden="true">
           <span data-index="01">
@@ -429,7 +535,17 @@ function AboutPage() {
             <small>ACT IV</small>
           </span>
         </div>
-        {hasText(content.archive.at(-1)?.[1]) ? <p className="about-note reveal-section reveal-item">{content.archive.at(-1)?.[1]}</p> : null}
+        {hasText(content.archive.at(-1)?.[1]) ? (
+          <AdminEditable
+            className="about-note reveal-section reveal-item"
+            onEdit={editor.openArchiveEditor}
+            onAdd={editor.addSingle}
+            onDelete={editor.clearArchive}
+            addDisabledMessage={editor.singleItemMessage}
+          >
+            {content.archive.at(-1)?.[1]}
+          </AdminEditable>
+        ) : null}
       </div>
     </PageShell>
   );
@@ -437,23 +553,44 @@ function AboutPage() {
 
 function PeoplePage() {
   const content = useSiteContent();
-  const people = visiblePeople(content.people);
+  const editor = useScopedContentEditor();
+  const people = (content.people || [])
+    .map((person, index) => ({ person, index }))
+    .filter(({ person }) => hasAnyText(person, ["photo", "name", "email", "interests", "history", "experience"]));
   const [selectedPerson, setSelectedPerson] = useState(null);
+  const renderPersonCard = (person) => (
+    <>
+      {person.photo ? (
+        <figure>
+          <img src={person.photo} alt="" />
+        </figure>
+      ) : null}
+      {hasText(person.name) ? <h2>{person.name}</h2> : null}
+      {person.interests ? <h3>{person.interests}</h3> : null}
+    </>
+  );
   return (
     <PageShell title="People">
       <div className="people-page reveal-section">
         <span className="professor-label">PEOPLE</span>
         <div className="people-grid-page">
-          {people.map((person) => (
-            <button className="people-card" type="button" onClick={() => setSelectedPerson(person)} key={person.id || person.name}>
-              {person.photo ? (
-                <figure>
-                  <img src={person.photo} alt="" />
-                </figure>
-              ) : null}
-              {hasText(person.name) ? <h2>{person.name}</h2> : null}
-              {person.interests ? <h3>{person.interests}</h3> : null}
-            </button>
+          {people.map(({ person, index }) => (
+            editor.isEditing ? (
+              <AdminEditable
+                as="article"
+                className="people-card"
+                key={person.id || person.name}
+                onEdit={() => editor.openPersonEditor(person, index)}
+                onAdd={() => editor.openPersonEditor()}
+                onDelete={() => editor.removePerson(index)}
+              >
+                {renderPersonCard(person)}
+              </AdminEditable>
+            ) : (
+              <button className="people-card" type="button" onClick={() => setSelectedPerson(person)} key={person.id || person.name}>
+                {renderPersonCard(person)}
+              </button>
+            )
           ))}
         </div>
       </div>
@@ -514,8 +651,10 @@ function PeopleModal({ person, onClose }) {
 
 function PeopleDetailPage({ id }) {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
   const person = findById(content.people || [], id, "name");
   if (!person) return <NotFoundPage />;
+  const personIndex = findIndexById(content.people || [], id, "name");
   const fields = [
     ["Email", person.email],
     ["兴趣方向", person.interests],
@@ -524,46 +663,60 @@ function PeopleDetailPage({ id }) {
   ].filter(([, value]) => hasText(value));
   return (
     <PageShell title={person.name || "People"}>
-      <article className="detail-page people-detail reveal-section">
-        {person.photo ? (
-          <figure className="detail-hero reveal-item">
-            <img src={person.photo} alt="" />
-          </figure>
-        ) : null}
-        {fields.length ? (
-          <div className="detail-fields">
-            {fields.map(([label, value]) => (
-                <section className="detail-field reveal-item" key={label}>
-                  <span>{label}</span>
-                  <p>{value}</p>
-                </section>
-              ))}
-          </div>
-        ) : null}
-      </article>
+      <DetailArticle
+        image={person.photo}
+        fields={fields}
+        className="detail-page people-detail reveal-section"
+        editableProps={{
+          onEdit: () => editor.openPersonEditor(person, personIndex),
+          onAdd: () => editor.openPersonEditor(),
+          onDelete: () => editor.removePerson(personIndex, () => { window.location.href = siteHref("/people"); }),
+        }}
+      />
     </PageShell>
   );
 }
 
 function WorksPage() {
   const content = useSiteContent();
-  const works = visibleWorks(content.works);
+  const editor = useScopedContentEditor();
+  const works = (content.works || [])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["image", "title", "date", "text", "people", "body"]));
+  const renderWorkRow = (item) => (
+    <>
+      {hasText(item.image) ? (
+        <figure>
+          <img src={item.image} alt="" />
+        </figure>
+      ) : null}
+      {hasText(item.date) || hasText(item.title) || hasText(item.text) ? <div>
+        {hasText(item.date) ? <span>{item.date}</span> : null}
+        {hasText(item.title) ? <h2>{item.title}</h2> : null}
+        {hasText(item.text) ? <p>{item.text}</p> : null}
+      </div> : null}
+    </>
+  );
   return (
     <PageShell title="Works">
       <div className="works-page reveal-section">
-        {works.map((item) => (
-          <a className="work-row reveal-item" href={`/works/${item.id || makeId(item.title)}`} key={item.id || item.title}>
-            {hasText(item.image) ? (
-              <figure>
-                <img src={item.image} alt="" />
-              </figure>
-            ) : null}
-            {hasText(item.date) || hasText(item.title) || hasText(item.text) ? <div>
-              {hasText(item.date) ? <span>{item.date}</span> : null}
-              {hasText(item.title) ? <h2>{item.title}</h2> : null}
-              {hasText(item.text) ? <p>{item.text}</p> : null}
-            </div> : null}
-          </a>
+        {works.map(({ item, index }) => (
+          editor.isEditing ? (
+            <AdminEditable
+              as="article"
+              className="work-row reveal-item"
+              key={item.id || item.title}
+              onEdit={() => editor.openWorkEditor(item, index)}
+              onAdd={() => editor.openWorkEditor()}
+              onDelete={() => editor.removeWork(index)}
+            >
+              {renderWorkRow(item)}
+            </AdminEditable>
+          ) : (
+            <a className="work-row reveal-item" href={siteHref(`/works/${item.id || makeId(item.title)}`)} key={item.id || item.title}>
+              {renderWorkRow(item)}
+            </a>
+          )
         ))}
       </div>
     </PageShell>
@@ -572,8 +725,10 @@ function WorksPage() {
 
 function WorksDetailPage({ id }) {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
   const work = findById(content.works || [], id);
   if (!work) return <NotFoundPage />;
+  const workIndex = findIndexById(content.works || [], id);
   return (
     <PageShell title={work.title || "Works"}>
       <DetailArticle image={work.image} fields={[
@@ -581,22 +736,46 @@ function WorksDetailPage({ id }) {
         ["人员", work.people],
         ["介绍", work.text],
         ["正文", work.body],
-      ]} />
+      ]} editableProps={{
+        onEdit: () => editor.openWorkEditor(work, workIndex),
+        onAdd: () => editor.openWorkEditor(),
+        onDelete: () => editor.removeWork(workIndex, () => { window.location.href = siteHref("/works"); }),
+      }} />
     </PageShell>
   );
 }
 
 function BoardPage() {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
+  const renderBoardHub = (key, section, index) => (
+    <>
+      <span>{String(index + 1).padStart(2, "0")}</span>
+      <strong>{section.title}</strong>
+      <p>{visibleBoardItems(content, key).length} ITEMS</p>
+    </>
+  );
   return (
     <PageShell title="Board">
       <div className="board-hub reveal-section">
         {Object.entries(boardSections).map(([key, section], index) => (
-          <a className="board-hub-card reveal-item" href={section.path} key={key}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{section.title}</strong>
-            <p>{visibleBoardItems(content, key).length} ITEMS</p>
-          </a>
+          editor.isEditing ? (
+            <AdminEditable
+              as="article"
+              className="board-hub-card reveal-item"
+              key={key}
+              onEdit={() => { window.location.href = siteHref(section.path); }}
+              onAdd={() => editor.openBoardEditor(section.dataKey)}
+              onDelete={editor.denyDelete}
+              deleteDisabledMessage={editor.fixedModuleMessage}
+            >
+              {renderBoardHub(key, section, index)}
+            </AdminEditable>
+          ) : (
+            <a className="board-hub-card reveal-item" href={siteHref(section.path)} key={key}>
+              {renderBoardHub(key, section, index)}
+            </a>
+          )
         ))}
       </div>
     </PageShell>
@@ -605,9 +784,19 @@ function BoardPage() {
 
 function BoardListPage({ section }) {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
   const meta = boardSections[section];
   if (!meta) return <NotFoundPage />;
-  const items = visibleBoardTextItems(content, section);
+  const items = getBoardItems(content, section)
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
+  const renderBoardRow = (item) => (
+    <>
+      {hasText(item.date) ? <span>{item.date}</span> : null}
+      {hasText(item.title) ? <strong>{item.title}</strong> : null}
+      {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
+    </>
+  );
   return (
     <PageShell title={meta.title}>
       <div className="board-page reveal-section">
@@ -616,12 +805,23 @@ function BoardListPage({ section }) {
           <span>TITLE</span>
           <span>INTRO</span>
         </div>
-        {items.map((item) => (
-          <a className="board-row reveal-item" href={`${meta.path}/${item.id || makeId(item.title)}`} key={item.id || item.title}>
-            {hasText(item.date) ? <span>{item.date}</span> : null}
-            {hasText(item.title) ? <strong>{item.title}</strong> : null}
-            {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
-          </a>
+        {items.map(({ item, index }) => (
+          editor.isEditing ? (
+            <AdminEditable
+              as="article"
+              className="board-row reveal-item"
+              key={item.id || item.title}
+              onEdit={() => editor.openBoardEditor(meta.dataKey, item, index)}
+              onAdd={() => editor.openBoardEditor(meta.dataKey)}
+              onDelete={() => editor.removeBoardItem(meta.dataKey, index)}
+            >
+              {renderBoardRow(item)}
+            </AdminEditable>
+          ) : (
+            <a className="board-row reveal-item" href={siteHref(`${meta.path}/${item.id || makeId(item.title)}`)} key={item.id || item.title}>
+              {renderBoardRow(item)}
+            </a>
+          )
         ))}
       </div>
     </PageShell>
@@ -630,9 +830,12 @@ function BoardListPage({ section }) {
 
 function BoardDetailPage({ section, id }) {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
   const meta = boardSections[section];
-  const item = findById(getBoardItems(content, section), id);
+  const list = getBoardItems(content, section);
+  const item = findById(list, id);
   if (!meta || !item) return <NotFoundPage />;
+  const itemIndex = findIndexById(list, id);
   return (
     <PageShell title={item.title || meta.title}>
       <DetailArticle image={item.image} fields={[
@@ -640,15 +843,19 @@ function BoardDetailPage({ section, id }) {
         ["人员", item.people],
         ["介绍", item.intro],
         ["正文", item.body],
-      ]} />
+      ]} editableProps={{
+        onEdit: () => editor.openBoardEditor(meta.dataKey, item, itemIndex),
+        onAdd: () => editor.openBoardEditor(meta.dataKey),
+        onDelete: () => editor.removeBoardItem(meta.dataKey, itemIndex, () => { window.location.href = siteHref(meta.path); }),
+      }} />
     </PageShell>
   );
 }
 
-function DetailArticle({ image, fields }) {
+function DetailArticle({ image, fields, className = "detail-page reveal-section", editableProps = {} }) {
   const visibleFields = fields.filter(([, value]) => hasText(value));
   return (
-    <article className="detail-page reveal-section">
+    <AdminEditable as="article" className={className} {...editableProps}>
       {image ? (
         <figure className="detail-hero reveal-item">
           <img src={image} alt="" />
@@ -664,12 +871,13 @@ function DetailArticle({ image, fields }) {
           ))}
         </div>
       ) : null}
-    </article>
+    </AdminEditable>
   );
 }
 
 function ContactPage() {
   const content = useSiteContent();
+  const editor = useScopedContentEditor();
   const fields = [
     ["地址", content.site.contactAddress],
     ["邮箱", content.site.contactEmail],
@@ -677,14 +885,21 @@ function ContactPage() {
   ].filter(([, value]) => hasText(value));
   return (
     <PageShell title="Contact">
-      <div className="contact-container reveal-section">
+      <AdminEditable
+        className="contact-container reveal-section"
+        onEdit={editor.openSiteEditor}
+        onAdd={editor.addSingle}
+        onDelete={editor.denyDelete}
+        addDisabledMessage={editor.singleItemMessage}
+        deleteDisabledMessage={editor.fixedModuleMessage}
+      >
         {fields.map(([label, value]) => (
           <div className="item reveal-item" key={label}>
             <span className="label">{label}</span>
             <p className="address">{value}</p>
           </div>
         ))}
-      </div>
+      </AdminEditable>
     </PageShell>
   );
 }
@@ -725,7 +940,517 @@ function UploadBox({ onUpload }) {
   );
 }
 
+function AdminSessionProvider({ children }) {
+  const content = useSiteContent();
+  const { setContentFromCms } = useContentActions();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [editMode, setEditModeState] = useState(() => localStorage.getItem("act4-edit-mode") === "true");
+  const [modal, setModal] = useState(null);
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const messageTimer = useRef(null);
+
+  const showMessage = useCallback((nextMessage) => {
+    setMessage(nextMessage || "");
+    if (messageTimer.current) window.clearTimeout(messageTimer.current);
+    if (nextMessage) {
+      messageTimer.current = window.setTimeout(() => setMessage(""), 3600);
+    }
+  }, []);
+
+  const setEditMode = useCallback((nextValue) => {
+    setEditModeState((current) => {
+      const value = typeof nextValue === "function" ? nextValue(current) : Boolean(nextValue);
+      if (value) localStorage.setItem("act4-edit-mode", "true");
+      else localStorage.removeItem("act4-edit-mode");
+      return value;
+    });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/session", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) return;
+        setAuthenticated(Boolean(data.authenticated));
+        setAuthChecked(true);
+      })
+      .catch(() => active && setAuthChecked(true));
+    return () => {
+      active = false;
+      if (messageTimer.current) window.clearTimeout(messageTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authChecked && !authenticated) setEditMode(false);
+  }, [authChecked, authenticated, setEditMode]);
+
+  const persistScopedContent = useCallback(
+    async (updater, scope = {}) => {
+      const pagePath = normalizePath(scope.pagePath || window.location.pathname);
+      const moduleKey = scope.moduleKey || "content";
+      const action = scope.action || "update";
+      const nextContent = typeof updater === "function" ? updater(content) : updater;
+      const params = new URLSearchParams({ pagePath, module: moduleKey, action });
+      if (scope.columnId) params.set("columnId", scope.columnId);
+
+      setSaving(true);
+      const response = await fetch(`/api/content?${params.toString()}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Act4-Page-Path": pagePath,
+          "X-Act4-Module": moduleKey,
+          "X-Act4-Action": action,
+          ...(scope.columnId ? { "X-Act4-Column-Id": scope.columnId } : {}),
+        },
+        body: JSON.stringify(nextContent),
+      }).catch(() => null);
+      const data = response ? await response.json().catch(() => ({})) : {};
+      setSaving(false);
+
+      if (!response?.ok) {
+        showMessage("保存失败，请检查登录状态或服务端。");
+        return null;
+      }
+
+      const savedContent = data.content || nextContent;
+      setContentFromCms(savedContent);
+      notifyContentUpdated();
+      showMessage("已保存，当前页面模块已更新。");
+      return savedContent;
+    },
+    [content, setContentFromCms, showMessage],
+  );
+
+  const uploadImage = useCallback(
+    async (callback, file) => {
+      if (!file) return;
+      const body = new FormData();
+      body.append("image", file);
+      const response = await fetch("/api/upload", { method: "POST", body }).catch(() => null);
+      if (!response?.ok) {
+        showMessage("图片上传失败，请确认文件格式。");
+        return;
+      }
+      const data = await response.json();
+      callback(data.url);
+      showMessage("图片已上传，保存后生效。");
+    },
+    [showMessage],
+  );
+
+  const logout = useCallback(async () => {
+    await fetch("/api/logout", { method: "POST" }).catch(() => null);
+    setAuthenticated(false);
+    setEditMode(false);
+    showMessage("");
+  }, [showMessage]);
+
+  const value = useMemo(
+    () => ({
+      authenticated,
+      authChecked,
+      editMode,
+      saving,
+      message,
+      setAuthenticated,
+      setEditMode,
+      openModal: setModal,
+      showMessage,
+      persistScopedContent,
+      uploadImage,
+      logout,
+    }),
+    [authChecked, authenticated, editMode, logout, message, persistScopedContent, saving, showMessage, uploadImage],
+  );
+
+  return (
+    <AdminContext.Provider value={value}>
+      {children}
+      {authenticated && isAdminRoute() ? <AdminModeToggle /> : null}
+      {modal ? <AdminEditModal modal={modal} onClose={() => setModal(null)} uploadImage={uploadImage} /> : null}
+    </AdminContext.Provider>
+  );
+}
+
+function AdminModeToggle() {
+  const { editMode, setEditMode, saving, message, logout } = useAdminSession();
+  return (
+    <aside className="front-admin-toolbar" aria-label="Front admin controls">
+      <button type="button" className={editMode ? "active" : ""} onClick={() => setEditMode(!editMode)}>
+        {editMode ? <Pencil size={15} /> : <Eye size={15} />}
+        {editMode ? "编辑模式" : "预览模式"}
+      </button>
+      <button type="button" onClick={logout}>
+        <LogOut size={15} />
+        退出
+      </button>
+      {saving ? <span><Loader2 className="spin" size={14} />保存中</span> : null}
+      {message ? <span>{message}</span> : null}
+    </aside>
+  );
+}
+
+function AdminEditable({
+  as: Component = "div",
+  className = "",
+  children,
+  onEdit,
+  onAdd,
+  onDelete,
+  addDisabledMessage,
+  deleteDisabledMessage,
+  ...props
+}) {
+  const { authenticated, editMode } = useAdminSession();
+  const hasControls = Boolean(onEdit || onAdd || onDelete || addDisabledMessage || deleteDisabledMessage);
+  const active = authenticated && editMode && isAdminRoute() && hasControls;
+  const combinedClassName = [className, active ? "admin-editable front-admin-editable" : ""].filter(Boolean).join(" ");
+
+  return (
+    <Component {...props} className={combinedClassName}>
+      {active ? (
+        <AdminInlineControls
+          onEdit={onEdit}
+          onAdd={onAdd}
+          onDelete={onDelete}
+          addDisabledMessage={addDisabledMessage}
+          deleteDisabledMessage={deleteDisabledMessage}
+        />
+      ) : null}
+      {children}
+    </Component>
+  );
+}
+
+function useScopedContentEditor() {
+  const content = useSiteContent();
+  const admin = useAdminSession();
+  const pagePath = currentPagePath();
+  const singleItemMessage = "该模块仅限一条";
+  const fixedModuleMessage = "该模块不能删除";
+
+  const commit = (updater, scope = {}) => admin.persistScopedContent(updater, { pagePath, ...scope });
+  const addSingle = () => admin.showMessage(singleItemMessage);
+  const denyDelete = () => admin.showMessage(fixedModuleMessage);
+  const confirmDelete = (question, updater, scope = {}, afterSave) => {
+    if (!window.confirm(question)) return;
+    commit(updater, { ...scope, action: "delete" }).then((saved) => {
+      if (saved && afterSave) afterSave();
+    });
+  };
+
+  const openSiteEditor = () => {
+    const site = content.site || {};
+    admin.openModal({
+      title: "编辑基础信息",
+      initial: {
+        topLine: site.topLine || "",
+        logo: site.logo || "",
+        contactAddress: site.contactAddress || "",
+        contactEmail: site.contactEmail || "",
+        contactDirections: site.contactDirections || "",
+        footerTagline: site.footerTagline || "",
+      },
+      fields: [
+        { name: "topLine", label: "顶部文案" },
+        { name: "logo", label: "Logo 图片", type: "image" },
+        { name: "contactAddress", label: "地址", type: "textarea" },
+        { name: "contactEmail", label: "邮箱" },
+        { name: "contactDirections", label: "方向", type: "textarea" },
+        { name: "footerTagline", label: "页脚说明", type: "textarea" },
+      ],
+      onSubmit: (values) =>
+        commit((current) => ({ ...current, site: { ...current.site, ...values } }), {
+          moduleKey: "site",
+          action: "update",
+        }),
+    });
+  };
+
+  const openHomeEditor = () => {
+    admin.openModal({
+      title: "编辑首页简介",
+      initial: { homeIntro: (content.homeIntro || []).join("\n\n") },
+      fields: [{ name: "homeIntro", label: "首页简介", type: "textarea", rows: 8 }],
+      onSubmit: (values) =>
+        commit((current) => ({ ...current, homeIntro: splitAdminParagraphs(values.homeIntro) }), {
+          moduleKey: "homeIntro",
+          action: "update",
+        }),
+    });
+  };
+
+  const clearHomeIntro = () =>
+    confirmDelete(
+      "确认清空首页简介？",
+      (current) => ({ ...current, homeIntro: [] }),
+      { moduleKey: "homeIntro" },
+    );
+
+  const openAboutHeadingEditor = () => {
+    const about = content.about || {};
+    admin.openModal({
+      title: "编辑 About 标题",
+      initial: { label: about.label || "", title: about.title || "" },
+      fields: [
+        { name: "label", label: "标签" },
+        { name: "title", label: "标题" },
+      ],
+      onSubmit: (values) =>
+        commit((current) => ({ ...current, about: { ...current.about, ...values } }), {
+          moduleKey: "about.heading",
+          action: "update",
+        }),
+    });
+  };
+
+  const openAboutSectionEditor = (section = {}, index = null) => {
+    admin.openModal({
+      title: index === null ? "增加 About 内容" : "编辑 About 内容",
+      initial: {
+        number: section.number || "",
+        title: section.title || "",
+        paragraphs: (section.paragraphs || []).join("\n\n"),
+      },
+      fields: [
+        { name: "number", label: "编号" },
+        { name: "title", label: "标题" },
+        { name: "paragraphs", label: "正文", type: "textarea", rows: 8 },
+      ],
+      onSubmit: (values) =>
+        commit(
+          (current) => {
+            const nextSection = {
+              ...section,
+              number: values.number,
+              title: values.title,
+              paragraphs: splitAdminParagraphs(values.paragraphs),
+            };
+            const sections = current.about?.sections || [];
+            return {
+              ...current,
+              about: {
+                ...current.about,
+                sections:
+                  index === null
+                    ? [...sections, nextSection]
+                    : sections.map((item, itemIndex) => (itemIndex === index ? nextSection : item)),
+              },
+            };
+          },
+          { moduleKey: "about.sections", action: index === null ? "create" : "update" },
+        ),
+    });
+  };
+
+  const removeAboutSection = (index) =>
+    confirmDelete(
+      "确认删除这个 About 内容模块？",
+      (current) => ({
+        ...current,
+        about: {
+          ...current.about,
+          sections: (current.about?.sections || []).filter((_, itemIndex) => itemIndex !== index),
+        },
+      }),
+      { moduleKey: "about.sections" },
+    );
+
+  const openArchiveEditor = () => {
+    const latest = content.archive?.at(-1) || ["Archive", ""];
+    admin.openModal({
+      title: "编辑理念文案",
+      initial: { label: latest[0] || "", text: latest[1] || "" },
+      fields: [
+        { name: "label", label: "内部标签" },
+        { name: "text", label: "显示文案", type: "textarea" },
+      ],
+      onSubmit: (values) =>
+        commit((current) => ({ ...current, archive: [[values.label || "Archive", values.text || ""]] }), {
+          moduleKey: "archive",
+          action: "update",
+        }),
+    });
+  };
+
+  const clearArchive = () =>
+    confirmDelete(
+      "确认清空这段理念文案？",
+      (current) => ({ ...current, archive: [["Archive", ""]] }),
+      { moduleKey: "archive" },
+    );
+
+  const peopleFields = [
+    { name: "photo", label: "照片", type: "image" },
+    { name: "name", label: "姓名" },
+    { name: "email", label: "邮箱" },
+    { name: "interests", label: "研究方向", type: "textarea" },
+    { name: "history", label: "经历", type: "textarea" },
+    { name: "experience", label: "经验", type: "textarea" },
+  ];
+
+  const openPersonEditor = (person = {}, index = null) => {
+    admin.openModal({
+      title: index === null ? "增加 People 条目" : "编辑 People 条目",
+      initial: {
+        photo: person.photo || "",
+        name: person.name || "",
+        email: person.email || "",
+        interests: person.interests || "",
+        history: person.history || "",
+        experience: person.experience || "",
+      },
+      fields: peopleFields,
+      onSubmit: (values) =>
+        commit(
+          (current) => {
+            const nextItem = { ...person, ...values, id: person.id || makeId(values.name || `person-${Date.now()}`) };
+            const people = current.people || [];
+            return {
+              ...current,
+              people: index === null ? [...people, nextItem] : people.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+            };
+          },
+          { moduleKey: "people", action: index === null ? "create" : "update" },
+        ),
+    });
+  };
+
+  const removePerson = (index, afterSave) =>
+    confirmDelete(
+      "确认删除这个 People 条目？",
+      (current) => ({ ...current, people: (current.people || []).filter((_, itemIndex) => itemIndex !== index) }),
+      { moduleKey: "people" },
+      afterSave,
+    );
+
+  const workFields = [
+    { name: "image", label: "图片", type: "image" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
+    { name: "people", label: "人员" },
+    { name: "text", label: "简介", type: "textarea" },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
+  ];
+
+  const openWorkEditor = (work = {}, index = null) => {
+    admin.openModal({
+      title: index === null ? "增加 Works 条目" : "编辑 Works 条目",
+      initial: {
+        image: work.image || "",
+        title: work.title || "",
+        date: work.date || "",
+        people: work.people || "",
+        text: work.text || "",
+        body: work.body || "",
+      },
+      fields: workFields,
+      onSubmit: (values) =>
+        commit(
+          (current) => {
+            const nextItem = { ...work, ...values, id: work.id || makeId(values.title || `work-${Date.now()}`) };
+            const works = current.works || [];
+            return {
+              ...current,
+              works: index === null ? [...works, nextItem] : works.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+            };
+          },
+          { moduleKey: "works", action: index === null ? "create" : "update" },
+        ),
+    });
+  };
+
+  const removeWork = (index, afterSave) =>
+    confirmDelete(
+      "确认删除这个 Works 条目？",
+      (current) => ({ ...current, works: (current.works || []).filter((_, itemIndex) => itemIndex !== index) }),
+      { moduleKey: "works" },
+      afterSave,
+    );
+
+  const boardFields = [
+    { name: "image", label: "图片", type: "image" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
+    { name: "people", label: "人员 / 作者" },
+    { name: "intro", label: "简介", type: "textarea" },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
+  ];
+
+  const openBoardEditor = (sectionKey, item = {}, index = null) => {
+    admin.openModal({
+      title: `${index === null ? "增加" : "编辑"} Board 条目`,
+      initial: {
+        image: item.image || "",
+        title: item.title || "",
+        date: item.date || "",
+        people: item.people || "",
+        intro: item.intro || "",
+        body: item.body || "",
+      },
+      fields: boardFields,
+      onSubmit: (values) =>
+        commit(
+          (current) => {
+            const nextItem = { ...item, ...values, id: item.id || makeId(values.title || `item-${Date.now()}`) };
+            const list = current.board?.[sectionKey] || [];
+            return {
+              ...current,
+              board: {
+                ...current.board,
+                [sectionKey]: index === null ? [...list, nextItem] : list.map((entry, itemIndex) => (itemIndex === index ? nextItem : entry)),
+              },
+            };
+          },
+          { moduleKey: `board.${sectionKey}`, columnId: sectionKey, action: index === null ? "create" : "update" },
+        ),
+    });
+  };
+
+  const removeBoardItem = (sectionKey, index, afterSave) =>
+    confirmDelete(
+      "确认删除这个 Board 条目？",
+      (current) => ({
+        ...current,
+        board: {
+          ...current.board,
+          [sectionKey]: (current.board?.[sectionKey] || []).filter((_, itemIndex) => itemIndex !== index),
+        },
+      }),
+      { moduleKey: `board.${sectionKey}`, columnId: sectionKey },
+      afterSave,
+    );
+
+  return {
+    isEditing: admin.authenticated && admin.editMode && isAdminRoute(),
+    addSingle,
+    denyDelete,
+    singleItemMessage,
+    fixedModuleMessage,
+    openSiteEditor,
+    openHomeEditor,
+    clearHomeIntro,
+    openAboutHeadingEditor,
+    openAboutSectionEditor,
+    removeAboutSection,
+    openArchiveEditor,
+    clearArchive,
+    openPersonEditor,
+    removePerson,
+    openWorkEditor,
+    removeWork,
+    openBoardEditor,
+    removeBoardItem,
+  };
+}
+
 function AdminPage() {
+  const adminSession = useAdminSession();
   const publicContent = useSiteContent();
   const { setContentFromCms } = useContentActions();
   const [authChecked, setAuthChecked] = useState(false);
@@ -747,18 +1472,31 @@ function AdminPage() {
 
   useEffect(() => {
     if (!loggedIn) return;
-    fetch(`/api/content?t=${Date.now()}`, { cache: "no-store" })
+    const params = new URLSearchParams({ t: String(Date.now()), pagePath: "/admin" });
+    fetch(`/api/content?${params.toString()}`, { cache: "no-store", headers: { "X-Act4-Page-Path": "/admin" } })
       .then((response) => response.json())
       .then((data) => setDraft(data))
       .catch(() => setDraft(publicContent));
   }, [loggedIn]);
 
+  useEffect(() => {
+    if (!loggedIn) return;
+    adminSession.setAuthenticated(true);
+    adminSession.setEditMode(true);
+  }, [loggedIn]);
+
   const persistContent = async (contentToSave = draft) => {
     setSaving(true);
     setMessage("");
-    const response = await fetch("/api/content", {
+    const params = new URLSearchParams({ pagePath: "/admin", module: "all", action: "update" });
+    const response = await fetch(`/api/content?${params.toString()}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Act4-Page-Path": "/admin",
+        "X-Act4-Module": "all",
+        "X-Act4-Action": "update",
+      },
       body: JSON.stringify(contentToSave),
     });
     const data = await response.json().catch(() => ({}));
@@ -784,6 +1522,8 @@ function AdminPage() {
     });
     if (response.ok) {
       setLoggedIn(true);
+      adminSession.setAuthenticated(true);
+      adminSession.setEditMode(true);
       setForm({ username: "admin", password: "" });
     } else {
       setMessage("用户名或密码不正确。");
@@ -793,6 +1533,8 @@ function AdminPage() {
   const logout = async () => {
     await fetch("/api/logout", { method: "POST" });
     setLoggedIn(false);
+    adminSession.setAuthenticated(false);
+    adminSession.setEditMode(false);
   };
 
   const uploadImage = async (callback, file) => {
@@ -871,18 +1613,7 @@ function AdminPage() {
     );
   }
 
-  return (
-    <AdminVisualEditor
-      draft={draft}
-      setDraft={setDraft}
-      save={save}
-      persistContent={persistContent}
-      saving={saving}
-      logout={logout}
-      message={message}
-      uploadImage={uploadImage}
-    />
-  );
+  return <main className="admin-screen"><Loader2 className="spin" /></main>;
 }
 
 function splitAdminParagraphs(value) {
@@ -1350,18 +2081,43 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
   );
 }
 
-function AdminInlineControls({ onEdit, onAdd, onDelete }) {
-  const handleClick = (event, action) => {
+function AdminInlineControls({ onEdit, onAdd, onDelete, addDisabledMessage, deleteDisabledMessage }) {
+  const { showMessage } = useAdminSession();
+  const handleClick = (event, action, disabledMessage) => {
     event.preventDefault();
     event.stopPropagation();
+    if (disabledMessage) {
+      showMessage(disabledMessage);
+      return;
+    }
     action?.();
   };
 
   return (
     <div className="admin-inline-controls" aria-label="内容管理按钮">
-      {onEdit ? <button type="button" onClick={(event) => handleClick(event, onEdit)}><Pencil size={13} />编辑</button> : null}
-      {onAdd ? <button type="button" onClick={(event) => handleClick(event, onAdd)}><Plus size={13} />增加</button> : null}
-      {onDelete ? <button type="button" onClick={(event) => handleClick(event, onDelete)}><Trash2 size={13} />删除</button> : null}
+      {onEdit ? <button type="button" title="编辑" onClick={(event) => handleClick(event, onEdit)}><Pencil size={13} />编辑</button> : null}
+      {onAdd || addDisabledMessage ? (
+        <button
+          type="button"
+          title={addDisabledMessage || "增加"}
+          aria-disabled={addDisabledMessage ? "true" : undefined}
+          className={addDisabledMessage ? "is-disabled" : ""}
+          onClick={(event) => handleClick(event, onAdd, addDisabledMessage)}
+        >
+          <Plus size={13} />增加
+        </button>
+      ) : null}
+      {onDelete || deleteDisabledMessage ? (
+        <button
+          type="button"
+          title={deleteDisabledMessage || "删除"}
+          aria-disabled={deleteDisabledMessage ? "true" : undefined}
+          className={deleteDisabledMessage ? "is-disabled" : ""}
+          onClick={(event) => handleClick(event, onDelete, deleteDisabledMessage)}
+        >
+          <X size={13} />删除
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -1522,9 +2278,9 @@ function WorksEditor({ draft, updateWork, removeWork, addWork, uploadImage }) {
   );
 }
 
-function CurrentPage() {
-  const path = normalizePath(window.location.pathname);
-  const parts = pathParts();
+function CurrentPage({ pathOverride = null }) {
+  const path = normalizePath(pathOverride || stripAdminPath());
+  const parts = pathPartsFrom(path);
   if (path === "/") return <HomePage />;
   if (path === "/about-lab") return <AboutPage />;
   if (path === "/people") return <PeoplePage />;
@@ -1535,7 +2291,6 @@ function CurrentPage() {
   if (parts[0] === "board" && parts[1] && !parts[2]) return <BoardListPage section={parts[1]} />;
   if (parts[0] === "board" && parts[1] && parts[2]) return <BoardDetailPage section={parts[1]} id={parts[2]} />;
   if (path === "/contact") return <ContactPage />;
-  if (path === "/admin") return <AdminPage />;
   return <NotFoundPage />;
 }
 
@@ -1543,7 +2298,14 @@ function AppContentProvider({ children }) {
   const [content, setContent] = useState(defaultContent);
   const setContentFromCms = useCallback((nextContent) => setContent({ ...defaultContent, ...nextContent }), []);
   const refreshContent = useCallback(async () => {
-    const response = await fetch(`/api/content?t=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+    const params = new URLSearchParams({ t: String(Date.now()), pagePath: currentPagePath() });
+    const response = await fetch(`/api/content?${params.toString()}`, {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache",
+        "X-Act4-Page-Path": currentPagePath(),
+      },
+    });
     if (!response.ok) throw new Error("No dynamic content");
     const data = await response.json();
     setContentFromCms(data);
@@ -1585,10 +2347,83 @@ function AppContentProvider({ children }) {
   );
 }
 
-function SiteFrame() {
-  const path = normalizePath(window.location.pathname);
+function getAdminCrumbs(path, content) {
+  const parts = pathPartsFrom(path);
+  const staticLabels = {
+    "about-lab": "About LAB",
+    people: "People",
+    works: "Works",
+    board: "Board",
+    contact: "Contact",
+    news: "News",
+    project: "Project",
+    research: "Research",
+  };
+  const crumbs = [{ label: "Admin", href: "/admin" }];
+  if (!parts.length) return [...crumbs, { label: "Home", href: "/admin" }];
+
+  let current = "";
+  parts.forEach((part, index) => {
+    current = `${current}/${part}`;
+    let label = staticLabels[part] || part;
+    if (parts[0] === "people" && index === 1) {
+      label = findById(content.people || [], part, "name")?.name || label;
+    }
+    if (parts[0] === "works" && index === 1) {
+      label = findById(content.works || [], part)?.title || label;
+    }
+    if (parts[0] === "board" && index === 2) {
+      label = findById(getBoardItems(content, parts[1]), part)?.title || label;
+    }
+    crumbs.push({ label, href: adminPathFor(current) });
+  });
+  return crumbs;
+}
+
+function AdminBreadcrumb({ path }) {
   const content = useSiteContent();
-  if (path === "/admin") return <CurrentPage />;
+  const crumbs = getAdminCrumbs(path, content);
+  return (
+    <nav className="admin-breadcrumb" aria-label="后台当前位置">
+      <div className="container">
+        {crumbs.map((crumb, index) => (
+          <a href={crumb.href} aria-current={index === crumbs.length - 1 ? "page" : undefined} key={`${crumb.href}-${index}`}>
+            {crumb.label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function AdminRouteFrame() {
+  const { authChecked, authenticated } = useAdminSession();
+  const content = useSiteContent();
+  const frontPath = stripAdminPath();
+
+  if (!authChecked) return <main className="admin-screen"><Loader2 className="spin" /></main>;
+  if (!authenticated) return <AdminPage />;
+
+  return (
+    <>
+      <Header />
+      <AdminBreadcrumb path={frontPath} />
+      <CurrentPage pathOverride={frontPath} />
+      <footer className="footer">
+        <div className="container">
+          <p>COPYRIGHT © 2026 ACT IV FUTURE VISUAL LAB</p>
+          <p>{content.site.footerTagline}</p>
+          <a href="/admin"><ArrowUp size={18} />top</a>
+        </div>
+      </footer>
+    </>
+  );
+}
+
+function SiteFrame() {
+  const path = rawCurrentPath();
+  const content = useSiteContent();
+  if (isAdminRoute(path)) return <AdminRouteFrame />;
   return (
     <>
       <Header />
@@ -1607,7 +2442,9 @@ function SiteFrame() {
 export default function App() {
   return (
     <AppContentProvider>
-      <SiteFrame />
+      <AdminSessionProvider>
+        <SiteFrame />
+      </AdminSessionProvider>
     </AppContentProvider>
   );
 }
