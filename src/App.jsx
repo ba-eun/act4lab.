@@ -131,20 +131,63 @@ function hasAnyText(item, keys) {
   return keys.some((key) => hasText(item?.[key]));
 }
 
+const PEOPLE_CONTENT_FIELDS = ["photo", "name", "email", "interests", "history", "experience"];
+const WORK_CONTENT_FIELDS = ["image", "title", "date", "text", "people", "body"];
+const BOARD_TEXT_FIELDS = ["title", "date", "intro", "people", "body"];
+const BOARD_CONTENT_FIELDS = ["image", ...BOARD_TEXT_FIELDS];
+const ABOUT_SECTION_FIELDS = ["number", "title", "paragraphs"];
+
+function hasAnyValue(item, keys) {
+  return keys.some((key) => {
+    const value = item?.[key];
+    if (Array.isArray(value)) return value.some(hasText);
+    return hasText(value);
+  });
+}
+
+function isEmptyContentItem(item, keys) {
+  return !hasAnyValue(item, keys);
+}
+
+function indexedRenderableItems(items = [], keys, includeEmpty = false) {
+  return (items || [])
+    .map((item, index) => ({ item, index, isEmpty: isEmptyContentItem(item, keys) }))
+    .filter(({ isEmpty }) => includeEmpty || !isEmpty);
+}
+
 function visiblePeople(people = []) {
-  return people.filter((person) => hasAnyText(person, ["photo", "name", "email", "interests", "history", "experience"]));
+  return people.filter((person) => hasAnyValue(person, PEOPLE_CONTENT_FIELDS));
 }
 
 function visibleWorks(works = []) {
-  return works.filter((work) => hasAnyText(work, ["image", "title", "date", "text", "people", "body"]));
+  return works.filter((work) => hasAnyValue(work, WORK_CONTENT_FIELDS));
 }
 
 function visibleBoardItems(content, section) {
-  return getBoardItems(content, section).filter((item) => hasAnyText(item, ["image", "title", "date", "intro", "people", "body"]));
+  return getBoardItems(content, section).filter((item) => hasAnyValue(item, BOARD_CONTENT_FIELDS));
 }
 
 function visibleBoardTextItems(content, section) {
-  return getBoardItems(content, section).filter((item) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
+  return getBoardItems(content, section).filter((item) => hasAnyValue(item, BOARD_TEXT_FIELDS));
+}
+
+function EmptyEntryPlaceholder({ label = "空条目" }) {
+  return (
+    <div className="admin-empty-placeholder">
+      <Plus size={18} />
+      <span>添加内容</span>
+      <small>{label}</small>
+    </div>
+  );
+}
+
+function EmptyMediaPlaceholder({ label = "空图片" }) {
+  return (
+    <div className="admin-empty-media">
+      <ImagePlus size={18} />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 function notifyContentUpdated() {
@@ -350,15 +393,9 @@ function PageShell({ title, children }) {
 function HomePage() {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
-  const news = getBoardItems(content, "news")
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
-  const works = (content.works || [])
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["image", "title", "date", "text", "people", "body"]));
-  const projects = getBoardItems(content, "project")
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
+  const news = indexedRenderableItems(getBoardItems(content, "news"), BOARD_TEXT_FIELDS, editor.isEditing);
+  const works = indexedRenderableItems(content.works || [], WORK_CONTENT_FIELDS, editor.isEditing);
+  const projects = indexedRenderableItems(getBoardItems(content, "project"), BOARD_TEXT_FIELDS, editor.isEditing);
   useReveal();
   return (
     <main id="top" className="main">
@@ -392,31 +429,34 @@ function HomePage() {
         onDelete={editor.clearHomeIntro}
         addDisabledMessage={editor.singleItemMessage}
       >
-        {content.homeIntro.filter(hasText).map((paragraph) => (
-          <p className="reveal-item" key={paragraph}>
-            {paragraph}
-          </p>
-        ))}
+        {content.homeIntro.filter(hasText).length ? (
+          content.homeIntro.filter(hasText).map((paragraph) => (
+            <p className="reveal-item" key={paragraph}>
+              {paragraph}
+            </p>
+          ))
+        ) : editor.isEditing ? <EmptyEntryPlaceholder label="首页简介为空" /> : null}
       </AdminEditable>
 
       <div className="mb-latest container">
         <section className="news reveal-section">
           <MainTitle href="/board/news">News</MainTitle>
           <ul className="news-list">
-            {news.map(({ item, index }) => (
+            {news.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
                 className="reveal-item"
-                key={item.id || item.title}
+                empty={isEmpty}
+                key={item.id || item.title || `news-${index}`}
                 onEdit={() => editor.openBoardEditor("news", item, index)}
                 onAdd={() => editor.openBoardEditor("news")}
                 onDelete={() => editor.removeBoardItem("news", index)}
               >
-                <a href={siteHref(`/board/news/${item.id || makeId(item.title)}`)}>
+                {isEmpty ? <EmptyEntryPlaceholder label="空 News 条目" /> : <a href={siteHref(`/board/news/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
                   {hasText(item.intro || item.body) ? <span className="cont">{item.intro || item.body}</span> : null}
                   {hasText(item.date) ? <span className="date">{item.date}</span> : null}
-                </a>
+                </a>}
               </AdminEditable>
             ))}
           </ul>
@@ -425,16 +465,17 @@ function HomePage() {
         <section className="exhibition reveal-section">
           <MainTitle href="/works">Works</MainTitle>
           <ul className="exhibition-list">
-            {works.map(({ item, index }) => (
+            {works.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
                 className="reveal-item"
-                key={item.id || item.title}
+                empty={isEmpty}
+                key={item.id || item.title || `work-${index}`}
                 onEdit={() => editor.openWorkEditor(item, index)}
                 onAdd={() => editor.openWorkEditor()}
                 onDelete={() => editor.removeWork(index)}
               >
-                <a href={siteHref(`/works/${item.id || makeId(item.title)}`)}>
+                {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : <a href={siteHref(`/works/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) || hasText(item.date) ? (
                     <div className="item">
                       {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
@@ -445,8 +486,12 @@ function HomePage() {
                     <span className="thumb">
                       <img src={item.image} alt="" />
                     </span>
+                  ) : editor.isEditing ? (
+                    <span className="thumb admin-media-shell">
+                      <EmptyMediaPlaceholder />
+                    </span>
                   ) : null}
-                </a>
+                </a>}
               </AdminEditable>
             ))}
           </ul>
@@ -458,18 +503,19 @@ function HomePage() {
         <section className="project reveal-section">
           <MainTitle href="/board/project">Project</MainTitle>
           <ul className="project-list">
-            {projects.map(({ item, index }) => (
+            {projects.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
                 className="reveal-item"
-                key={item.id || item.title}
+                empty={isEmpty}
+                key={item.id || item.title || `project-${index}`}
                 onEdit={() => editor.openBoardEditor("projects", item, index)}
                 onAdd={() => editor.openBoardEditor("projects")}
                 onDelete={() => editor.removeBoardItem("projects", index)}
               >
-                <a href={siteHref(`/board/project/${item.id || makeId(item.title)}`)}>
+                {isEmpty ? <EmptyEntryPlaceholder label="空 Project 条目" /> : <a href={siteHref(`/board/project/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
-                </a>
+                </a>}
               </AdminEditable>
             ))}
           </ul>
@@ -482,9 +528,8 @@ function HomePage() {
 function AboutPage() {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
-  const sections = content.about.sections
-    .map((section, index) => ({ section: { ...section, paragraphs: (section.paragraphs || []).filter(hasText) }, index }))
-    .filter(({ section }) => hasText(section.title) || section.paragraphs.length);
+  const sections = indexedRenderableItems(content.about.sections || [], ABOUT_SECTION_FIELDS, editor.isEditing)
+    .map(({ item, index, isEmpty }) => ({ section: { ...item, paragraphs: (item.paragraphs || []).filter(hasText) }, index, isEmpty }));
   return (
     <PageShell title="About LAB">
       <div className="about-lab">
@@ -499,22 +544,27 @@ function AboutPage() {
           {hasText(content.about.label) ? <p>{content.about.label}</p> : null}
           {hasText(content.about.title) ? <p>{content.about.title}</p> : null}
         </AdminEditable>
-        {sections.map(({ section, index }) => (
+        {sections.map(({ section, index, isEmpty }) => (
           <AdminEditable
             as="section"
             className="cont-group reveal-section"
-            key={`${section.number}-${index}`}
+            empty={isEmpty}
+            key={`${section.number || "about"}-${index}`}
             onEdit={() => editor.openAboutSectionEditor(section, index)}
             onAdd={() => editor.openAboutSectionEditor()}
             onDelete={() => editor.removeAboutSection(index)}
           >
-            {hasText(section.number) ? <p className="num reveal-item">{section.number}</p> : null}
-            {hasText(section.title) ? <p className="subj reveal-item">{section.title}</p> : null}
-            <div className="reveal-item">
-              {section.paragraphs.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </div>
+            {isEmpty ? <EmptyEntryPlaceholder label="空 About 内容模块" /> : (
+              <>
+                {hasText(section.number) ? <p className="num reveal-item">{section.number}</p> : null}
+                {hasText(section.title) ? <p className="subj reveal-item">{section.title}</p> : null}
+                <div className="reveal-item">
+                  {section.paragraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </>
+            )}
           </AdminEditable>
         ))}
         <div className="object-band" aria-hidden="true">
@@ -535,15 +585,16 @@ function AboutPage() {
             <small>ACT IV</small>
           </span>
         </div>
-        {hasText(content.archive.at(-1)?.[1]) ? (
+        {hasText(content.archive.at(-1)?.[1]) || editor.isEditing ? (
           <AdminEditable
             className="about-note reveal-section reveal-item"
+            empty={!hasText(content.archive.at(-1)?.[1])}
             onEdit={editor.openArchiveEditor}
             onAdd={editor.addSingle}
             onDelete={editor.clearArchive}
             addDisabledMessage={editor.singleItemMessage}
           >
-            {content.archive.at(-1)?.[1]}
+            {hasText(content.archive.at(-1)?.[1]) ? content.archive.at(-1)?.[1] : <EmptyEntryPlaceholder label="理念文案为空" />}
           </AdminEditable>
         ) : null}
       </div>
@@ -554,19 +605,22 @@ function AboutPage() {
 function PeoplePage() {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
-  const people = (content.people || [])
-    .map((person, index) => ({ person, index }))
-    .filter(({ person }) => hasAnyText(person, ["photo", "name", "email", "interests", "history", "experience"]));
+  const people = indexedRenderableItems(content.people || [], PEOPLE_CONTENT_FIELDS, editor.isEditing);
   const [selectedPerson, setSelectedPerson] = useState(null);
-  const renderPersonCard = (person) => (
+  const renderPersonCard = (person, isEmpty) => (
     <>
-      {person.photo ? (
+      {isEmpty ? <EmptyEntryPlaceholder label="空 People 条目" /> : null}
+      {!isEmpty && person.photo ? (
         <figure>
           <img src={person.photo} alt="" />
         </figure>
+      ) : !isEmpty && editor.isEditing ? (
+        <figure className="admin-media-shell">
+          <EmptyMediaPlaceholder />
+        </figure>
       ) : null}
-      {hasText(person.name) ? <h2>{person.name}</h2> : null}
-      {person.interests ? <h3>{person.interests}</h3> : null}
+      {!isEmpty && hasText(person.name) ? <h2>{person.name}</h2> : null}
+      {!isEmpty && person.interests ? <h3>{person.interests}</h3> : null}
     </>
   );
   return (
@@ -574,21 +628,22 @@ function PeoplePage() {
       <div className="people-page reveal-section">
         <span className="professor-label">PEOPLE</span>
         <div className="people-grid-page">
-          {people.map(({ person, index }) => (
+          {people.map(({ item: person, index, isEmpty }) => (
             editor.isEditing ? (
               <AdminEditable
                 as="article"
                 className="people-card"
-                key={person.id || person.name}
+                empty={isEmpty}
+                key={person.id || person.name || `person-${index}`}
                 onEdit={() => editor.openPersonEditor(person, index)}
                 onAdd={() => editor.openPersonEditor()}
                 onDelete={() => editor.removePerson(index)}
               >
-                {renderPersonCard(person)}
+                {renderPersonCard(person, isEmpty)}
               </AdminEditable>
             ) : (
               <button className="people-card" type="button" onClick={() => setSelectedPerson(person)} key={person.id || person.name}>
-                {renderPersonCard(person)}
+                {renderPersonCard(person, isEmpty)}
               </button>
             )
           ))}
@@ -653,7 +708,7 @@ function PeopleDetailPage({ id }) {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
   const person = findById(content.people || [], id, "name");
-  if (!person) return <NotFoundPage />;
+  if (!person || (!editor.isEditing && isEmptyContentItem(person, PEOPLE_CONTENT_FIELDS))) return <NotFoundPage />;
   const personIndex = findIndexById(content.people || [], id, "name");
   const fields = [
     ["Email", person.email],
@@ -680,17 +735,20 @@ function PeopleDetailPage({ id }) {
 function WorksPage() {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
-  const works = (content.works || [])
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["image", "title", "date", "text", "people", "body"]));
-  const renderWorkRow = (item) => (
+  const works = indexedRenderableItems(content.works || [], WORK_CONTENT_FIELDS, editor.isEditing);
+  const renderWorkRow = (item, isEmpty) => (
     <>
-      {hasText(item.image) ? (
+      {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : null}
+      {!isEmpty && hasText(item.image) ? (
         <figure>
           <img src={item.image} alt="" />
         </figure>
+      ) : !isEmpty && editor.isEditing ? (
+        <figure className="admin-media-shell">
+          <EmptyMediaPlaceholder />
+        </figure>
       ) : null}
-      {hasText(item.date) || hasText(item.title) || hasText(item.text) ? <div>
+      {!isEmpty && (hasText(item.date) || hasText(item.title) || hasText(item.text)) ? <div>
         {hasText(item.date) ? <span>{item.date}</span> : null}
         {hasText(item.title) ? <h2>{item.title}</h2> : null}
         {hasText(item.text) ? <p>{item.text}</p> : null}
@@ -700,21 +758,22 @@ function WorksPage() {
   return (
     <PageShell title="Works">
       <div className="works-page reveal-section">
-        {works.map(({ item, index }) => (
+        {works.map(({ item, index, isEmpty }) => (
           editor.isEditing ? (
             <AdminEditable
               as="article"
               className="work-row reveal-item"
-              key={item.id || item.title}
+              empty={isEmpty}
+              key={item.id || item.title || `work-${index}`}
               onEdit={() => editor.openWorkEditor(item, index)}
               onAdd={() => editor.openWorkEditor()}
               onDelete={() => editor.removeWork(index)}
             >
-              {renderWorkRow(item)}
+              {renderWorkRow(item, isEmpty)}
             </AdminEditable>
           ) : (
             <a className="work-row reveal-item" href={siteHref(`/works/${item.id || makeId(item.title)}`)} key={item.id || item.title}>
-              {renderWorkRow(item)}
+              {renderWorkRow(item, isEmpty)}
             </a>
           )
         ))}
@@ -727,7 +786,7 @@ function WorksDetailPage({ id }) {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
   const work = findById(content.works || [], id);
-  if (!work) return <NotFoundPage />;
+  if (!work || (!editor.isEditing && isEmptyContentItem(work, WORK_CONTENT_FIELDS))) return <NotFoundPage />;
   const workIndex = findIndexById(content.works || [], id);
   return (
     <PageShell title={work.title || "Works"}>
@@ -752,7 +811,7 @@ function BoardPage() {
     <>
       <span>{String(index + 1).padStart(2, "0")}</span>
       <strong>{section.title}</strong>
-      <p>{visibleBoardItems(content, key).length} ITEMS</p>
+      <p>{visibleBoardTextItems(content, key).length} ITEMS</p>
     </>
   );
   return (
@@ -787,14 +846,16 @@ function BoardListPage({ section }) {
   const editor = useScopedContentEditor();
   const meta = boardSections[section];
   if (!meta) return <NotFoundPage />;
-  const items = getBoardItems(content, section)
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
-  const renderBoardRow = (item) => (
+  const items = indexedRenderableItems(getBoardItems(content, section), BOARD_TEXT_FIELDS, editor.isEditing);
+  const renderBoardRow = (item, isEmpty) => (
     <>
-      {hasText(item.date) ? <span>{item.date}</span> : null}
-      {hasText(item.title) ? <strong>{item.title}</strong> : null}
-      {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
+      {isEmpty ? <EmptyEntryPlaceholder label={`空 ${meta.title} 条目`} /> : (
+        <>
+          {hasText(item.date) ? <span>{item.date}</span> : null}
+          {hasText(item.title) ? <strong>{item.title}</strong> : null}
+          {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
+        </>
+      )}
     </>
   );
   return (
@@ -805,21 +866,22 @@ function BoardListPage({ section }) {
           <span>TITLE</span>
           <span>INTRO</span>
         </div>
-        {items.map(({ item, index }) => (
+        {items.map(({ item, index, isEmpty }) => (
           editor.isEditing ? (
             <AdminEditable
               as="article"
               className="board-row reveal-item"
-              key={item.id || item.title}
+              empty={isEmpty}
+              key={item.id || item.title || `${section}-${index}`}
               onEdit={() => editor.openBoardEditor(meta.dataKey, item, index)}
               onAdd={() => editor.openBoardEditor(meta.dataKey)}
               onDelete={() => editor.removeBoardItem(meta.dataKey, index)}
             >
-              {renderBoardRow(item)}
+              {renderBoardRow(item, isEmpty)}
             </AdminEditable>
           ) : (
             <a className="board-row reveal-item" href={siteHref(`${meta.path}/${item.id || makeId(item.title)}`)} key={item.id || item.title}>
-              {renderBoardRow(item)}
+              {renderBoardRow(item, isEmpty)}
             </a>
           )
         ))}
@@ -834,7 +896,7 @@ function BoardDetailPage({ section, id }) {
   const meta = boardSections[section];
   const list = getBoardItems(content, section);
   const item = findById(list, id);
-  if (!meta || !item) return <NotFoundPage />;
+  if (!meta || !item || (!editor.isEditing && isEmptyContentItem(item, BOARD_CONTENT_FIELDS))) return <NotFoundPage />;
   const itemIndex = findIndexById(list, id);
   return (
     <PageShell title={item.title || meta.title}>
@@ -853,12 +915,18 @@ function BoardDetailPage({ section, id }) {
 }
 
 function DetailArticle({ image, fields, className = "detail-page reveal-section", editableProps = {} }) {
+  const { authenticated, editMode } = useAdminSession();
+  const showEmptyPlaceholders = authenticated && editMode && isAdminRoute();
   const visibleFields = fields.filter(([, value]) => hasText(value));
   return (
     <AdminEditable as="article" className={className} {...editableProps}>
       {image ? (
         <figure className="detail-hero reveal-item">
           <img src={image} alt="" />
+        </figure>
+      ) : showEmptyPlaceholders ? (
+        <figure className="detail-hero reveal-item admin-media-shell">
+          <EmptyMediaPlaceholder />
         </figure>
       ) : null}
       {visibleFields.length ? (
@@ -870,6 +938,8 @@ function DetailArticle({ image, fields, className = "detail-page reveal-section"
             </section>
           ))}
         </div>
+      ) : showEmptyPlaceholders ? (
+        <EmptyEntryPlaceholder label="详情内容为空" />
       ) : null}
     </AdminEditable>
   );
@@ -893,12 +963,12 @@ function ContactPage() {
         addDisabledMessage={editor.singleItemMessage}
         deleteDisabledMessage={editor.fixedModuleMessage}
       >
-        {fields.map(([label, value]) => (
+        {fields.length ? fields.map(([label, value]) => (
           <div className="item reveal-item" key={label}>
             <span className="label">{label}</span>
             <p className="address">{value}</p>
           </div>
-        ))}
+        )) : editor.isEditing ? <EmptyEntryPlaceholder label="联系信息为空" /> : null}
       </AdminEditable>
     </PageShell>
   );
@@ -1099,6 +1169,7 @@ function AdminEditable({
   as: Component = "div",
   className = "",
   children,
+  empty = false,
   onEdit,
   onAdd,
   onDelete,
@@ -1109,7 +1180,7 @@ function AdminEditable({
   const { authenticated, editMode } = useAdminSession();
   const hasControls = Boolean(onEdit || onAdd || onDelete || addDisabledMessage || deleteDisabledMessage);
   const active = authenticated && editMode && isAdminRoute() && hasControls;
-  const combinedClassName = [className, active ? "admin-editable front-admin-editable" : ""].filter(Boolean).join(" ");
+  const combinedClassName = [className, active ? "admin-editable front-admin-editable" : "", active && empty ? "admin-empty-entry" : ""].filter(Boolean).join(" ");
 
   return (
     <Component {...props} className={combinedClassName}>

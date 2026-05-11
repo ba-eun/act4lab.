@@ -1681,6 +1681,60 @@ svg {
   outline-color: rgba(158, 203, 255, 0.68);
 }
 
+.admin-empty-entry {
+  min-height: 118px;
+  background: rgba(158, 203, 255, 0.026);
+}
+
+.admin-empty-placeholder {
+  grid-column: 1 / -1;
+  display: grid;
+  min-height: 92px;
+  place-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 1px dashed rgba(158, 203, 255, 0.46);
+  padding: 18px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  background: rgba(158, 203, 255, 0.035);
+}
+
+.admin-empty-placeholder span {
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.admin-empty-placeholder small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.admin-media-shell {
+  display: grid;
+  place-items: center;
+}
+
+.admin-empty-media {
+  display: grid;
+  min-height: 100%;
+  width: 100%;
+  place-items: center;
+  gap: 6px;
+  border: 1px dashed rgba(158, 203, 255, 0.42);
+  padding: 12px;
+  color: rgba(255, 255, 255, 0.58);
+  text-align: center;
+  background: rgba(158, 203, 255, 0.04);
+}
+
+.admin-empty-media span {
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .admin-inline-controls {
   position: absolute;
   top: 8px;
