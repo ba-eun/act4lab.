@@ -87,6 +87,10 @@ function visibleBoardItems(content, section) {
   return getBoardItems(content, section).filter((item) => hasAnyText(item, ["image", "title", "date", "intro", "people", "body"]));
 }
 
+function visibleBoardTextItems(content, section) {
+  return getBoardItems(content, section).filter((item) => hasAnyText(item, ["title", "date", "intro", "people", "body"]));
+}
+
 function notifyContentUpdated() {
   window.dispatchEvent(new Event(CONTENT_UPDATED_EVENT));
   try {
@@ -288,9 +292,9 @@ function PageShell({ title, children }) {
 
 function HomePage() {
   const content = useSiteContent();
-  const news = visibleBoardItems(content, "news");
+  const news = visibleBoardTextItems(content, "news");
   const works = visibleWorks(content.works);
-  const projects = visibleBoardItems(content, "project");
+  const projects = visibleBoardTextItems(content, "project");
   useReveal();
   return (
     <main id="top" className="main">
@@ -347,10 +351,12 @@ function HomePage() {
             {works.map((item) => (
               <li className="reveal-item" key={item.id || item.title}>
                 <a href={`/works/${item.id || makeId(item.title)}`}>
-                  <div className="item">
-                    {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
-                    {hasText(item.date) ? <span className="date">{item.date}</span> : null}
-                  </div>
+                  {hasText(item.title) || hasText(item.date) ? (
+                    <div className="item">
+                      {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
+                      {hasText(item.date) ? <span className="date">{item.date}</span> : null}
+                    </div>
+                  ) : null}
                   {hasText(item.image) ? (
                     <span className="thumb">
                       <img src={item.image} alt="" />
@@ -423,7 +429,7 @@ function AboutPage() {
             <small>ACT IV</small>
           </span>
         </div>
-        <p className="about-note reveal-section reveal-item">{content.archive.at(-1)?.[1]}</p>
+        {hasText(content.archive.at(-1)?.[1]) ? <p className="about-note reveal-section reveal-item">{content.archive.at(-1)?.[1]}</p> : null}
       </div>
     </PageShell>
   );
@@ -491,14 +497,16 @@ function PeopleModal({ person, onClose }) {
             <img src={person.photo} alt="" />
           </figure>
         ) : null}
-        <div className="people-modal-fields">
-          {fields.map(([label, value]) => (
-            <section className="people-modal-field" key={label}>
-              <span>{label}</span>
-              <p>{value}</p>
-            </section>
-          ))}
-        </div>
+        {fields.length ? (
+          <div className="people-modal-fields">
+            {fields.map(([label, value]) => (
+              <section className="people-modal-field" key={label}>
+                <span>{label}</span>
+                <p>{value}</p>
+              </section>
+            ))}
+          </div>
+        ) : null}
       </article>
     </div>
   );
@@ -550,11 +558,11 @@ function WorksPage() {
                 <img src={item.image} alt="" />
               </figure>
             ) : null}
-            <div>
+            {hasText(item.date) || hasText(item.title) || hasText(item.text) ? <div>
               {hasText(item.date) ? <span>{item.date}</span> : null}
               {hasText(item.title) ? <h2>{item.title}</h2> : null}
               {hasText(item.text) ? <p>{item.text}</p> : null}
-            </div>
+            </div> : null}
           </a>
         ))}
       </div>
@@ -599,7 +607,7 @@ function BoardListPage({ section }) {
   const content = useSiteContent();
   const meta = boardSections[section];
   if (!meta) return <NotFoundPage />;
-  const items = visibleBoardItems(content, section);
+  const items = visibleBoardTextItems(content, section);
   return (
     <PageShell title={meta.title}>
       <div className="board-page reveal-section">
@@ -610,9 +618,9 @@ function BoardListPage({ section }) {
         </div>
         {items.map((item) => (
           <a className="board-row reveal-item" href={`${meta.path}/${item.id || makeId(item.title)}`} key={item.id || item.title}>
-            {hasText(item.date) ? <span>{item.date}</span> : <span />}
-            {hasText(item.title) ? <strong>{item.title}</strong> : <strong />}
-            {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : <p />}
+            {hasText(item.date) ? <span>{item.date}</span> : null}
+            {hasText(item.title) ? <strong>{item.title}</strong> : null}
+            {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
           </a>
         ))}
       </div>
