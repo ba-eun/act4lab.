@@ -211,6 +211,7 @@ function hasAnyText(item, keys) {
 
 const PEOPLE_CONTENT_FIELDS = ["photo", "name", "email", "interests", "history", "experience"];
 const WORK_CONTENT_FIELDS = ["image", "title", "date", "text", "people", "body"];
+const BOARD_LIST_FIELDS = ["title", "date"];
 const BOARD_TEXT_FIELDS = ["title", "date", "intro", "people", "body"];
 const BOARD_CONTENT_FIELDS = ["image", ...BOARD_TEXT_FIELDS];
 const ABOUT_SECTION_FIELDS = ["number", "title", "paragraphs"];
@@ -1000,25 +1001,24 @@ function BoardListPage({ section }) {
   const editor = useScopedContentEditor();
   const meta = boardSections[section];
   if (!meta) return <NotFoundPage />;
-  const items = indexedRenderableItems(getBoardItems(content, section), BOARD_TEXT_FIELDS, editor.isEditing);
+  const items = indexedRenderableItems(getBoardItems(content, section), BOARD_LIST_FIELDS, editor.isEditing);
   const renderBoardRow = (item, isEmpty) => (
     <>
       {isEmpty ? <EmptyEntryPlaceholder label={`空 ${meta.title} 条目`} /> : (
         <>
           {hasText(item.date) ? <span>{item.date}</span> : null}
           {hasText(item.title) ? <strong>{item.title}</strong> : null}
-          {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
         </>
       )}
     </>
   );
+  const itemHref = (item) => siteHref(`${meta.path}/${item.id || makeId(item.title)}`);
   return (
     <PageShell title={meta.title}>
       <div className="board-page reveal-section">
         <div className="board-head reveal-item">
           <span>DATE</span>
           <span>TITLE</span>
-          <span>INTRO</span>
         </div>
         {items.map(({ item, index, isEmpty }) => (
           editor.isEditing ? (
@@ -1034,9 +1034,18 @@ function BoardListPage({ section }) {
               {renderBoardRow(item, isEmpty)}
             </AdminEditable>
           ) : (
-            <a className="board-row reveal-item" href={siteHref(`${meta.path}/${item.id || makeId(item.title)}`)} key={item.id || item.title}>
-              {renderBoardRow(item, isEmpty)}
-            </a>
+            <article className="board-row reveal-item" key={item.id || item.title}>
+              {isEmpty ? <EmptyEntryPlaceholder label={`空 ${meta.title} 条目`} /> : (
+                <>
+                  {hasText(item.date) ? <span>{item.date}</span> : null}
+                  {hasText(item.title) ? (
+                    <a className="board-row-title" href={itemHref(item)} target="_blank" rel="noreferrer">
+                      {item.title}
+                    </a>
+                  ) : null}
+                </>
+              )}
+            </article>
           )
         ))}
       </div>
@@ -2264,14 +2273,12 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
                   <div className="board-head reveal-item">
                     <span>DATE</span>
                     <span>TITLE</span>
-                    <span>INTRO</span>
                   </div>
                   {indexedItems.map(({ item, index }) => (
                     <article className="board-row reveal-item admin-editable" key={item.id || index}>
                       <AdminInlineControls onEdit={() => openBoardEditor(listKey, item, index)} onAdd={() => openBoardEditor(listKey)} onDelete={() => removeBoardItem(listKey, index)} />
                       {hasText(item.date) ? <span>{item.date}</span> : null}
                       {hasText(item.title) ? <strong>{item.title}</strong> : null}
-                      {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
                     </article>
                   ))}
                 </div>

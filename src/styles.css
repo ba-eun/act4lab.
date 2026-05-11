@@ -890,7 +890,7 @@ svg {
 .board-head,
 .board-row {
   display: grid;
-  grid-template-columns: 150px 0.5fr 1fr;
+  grid-template-columns: 150px minmax(0, 1fr);
   gap: 28px;
   align-items: center;
   border-bottom: 1px solid var(--soft-line);
@@ -904,10 +904,20 @@ svg {
   letter-spacing: 0.14em;
 }
 
-.board-row strong {
+.board-row strong,
+.board-row-title {
   color: #fff;
   font-size: clamp(1.2rem, 1.5vw, 1.7rem);
   white-space: pre-line;
+}
+
+.board-row-title {
+  font-weight: 900;
+  transition: color 0.2s ease;
+}
+
+.board-row-title:hover {
+  color: var(--primary-2);
 }
 
 .board-row span,
