@@ -235,20 +235,27 @@ function MainTitle({ children, href = "#" }) {
 }
 
 function useReveal() {
+  const content = useSiteContent();
   useEffect(() => {
-    const sections = gsap.utils.toArray(".reveal-section");
-    sections.forEach((section) => {
-      gsap.to(section.querySelectorAll(".reveal-item"), {
-        opacity: 1,
-        y: 0,
-        duration: 0.72,
-        ease: "power3.out",
-        stagger: 0.16,
-        scrollTrigger: { trigger: section, start: "top 78%" },
+    const context = gsap.context(() => {
+      const sections = gsap.utils.toArray(".reveal-section");
+      sections.forEach((section) => {
+        const items = section.querySelectorAll(".reveal-item");
+        if (!items.length) return;
+        gsap.from(items, {
+          autoAlpha: 0,
+          y: 50,
+          duration: 0.72,
+          ease: "power3.out",
+          stagger: 0.16,
+          immediateRender: false,
+          scrollTrigger: { trigger: section, start: "top 78%", once: true },
+        });
       });
+      ScrollTrigger.refresh();
     });
-    return () => ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
-  }, []);
+    return () => context.revert();
+  }, [content]);
 }
 
 function PageShell({ title, children }) {
@@ -375,19 +382,19 @@ function AboutPage() {
           </section>
         ))}
         <div className="object-band" aria-hidden="true">
-          <span>
+          <span data-index="01">
             <b>凝视/秩序</b>
             <small>ACT I</small>
           </span>
-          <span>
+          <span data-index="02">
             <b>流动/叙事</b>
             <small>ACT II</small>
           </span>
-          <span>
+          <span data-index="03">
             <b>对话/共生</b>
             <small>ACT III</small>
           </span>
-          <span>
+          <span data-index="04">
             <b>破壁/融合</b>
             <small>ACT IV</small>
           </span>
@@ -790,7 +797,15 @@ function AdminPage() {
           </div>
         </div>
 
-        <section className="admin-panel">
+        <nav className="admin-quicknav" aria-label="后台分区">
+          <a href="#admin-site">基础信息</a>
+          <a href="#admin-home">首页介绍</a>
+          <a href="#admin-board-content">Board</a>
+          <a href="#admin-people">People</a>
+          <a href="#admin-works">Works</a>
+        </nav>
+
+        <section className="admin-panel" id="admin-site">
           <h2>基础信息</h2>
           <div className="admin-grid">
             <TextInput label="顶部细条文案" value={draft.site.topLine} onChange={(value) => setDraft({ ...draft, site: { ...draft.site, topLine: value } })} />
@@ -801,7 +816,7 @@ function AdminPage() {
           </div>
         </section>
 
-        <section className="admin-panel">
+        <section className="admin-panel" id="admin-home">
           <h2>首页介绍</h2>
           <div className="admin-grid">
             {draft.homeIntro.map((paragraph, index) => (
@@ -822,7 +837,7 @@ function AdminPage() {
 
 function BoardEditor({ draft, addBoardItem, removeBoardItem, updateBoardItem, uploadImage }) {
   return (
-    <section className="admin-panel">
+    <section className="admin-panel" id="admin-board-content">
       <h2>Board / News / Project / Research</h2>
       {Object.entries(boardSections).map(([section, meta]) => {
         const key = meta.dataKey;
@@ -860,7 +875,7 @@ function BoardEditor({ draft, addBoardItem, removeBoardItem, updateBoardItem, up
 
 function PeopleEditor({ draft, updatePerson, removePerson, addPerson, uploadImage }) {
   return (
-    <section className="admin-panel">
+    <section className="admin-panel" id="admin-people">
       <div className="admin-section-head">
         <h2>People</h2>
         <button type="button" onClick={addPerson}><Plus size={16} />新增</button>
@@ -890,7 +905,7 @@ function PeopleEditor({ draft, updatePerson, removePerson, addPerson, uploadImag
 
 function WorksEditor({ draft, updateWork, removeWork, addWork, uploadImage }) {
   return (
-    <section className="admin-panel">
+    <section className="admin-panel" id="admin-works">
       <div className="admin-section-head">
         <h2>Works</h2>
         <button type="button" onClick={addWork}><Plus size={16} />新增</button>

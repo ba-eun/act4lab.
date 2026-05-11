@@ -467,27 +467,55 @@ svg {
 
 .object-band {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  min-height: 230px;
-  margin-bottom: clamp(64px, 9vw, 110px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: 280px;
+  margin-bottom: clamp(34px, 5vw, 70px);
   border: 1px solid var(--line);
   background:
+    linear-gradient(180deg, rgba(158, 203, 255, 0.08), transparent 58%),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 80px),
     #050505;
 }
 
 .object-band span {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 16px;
+  min-height: 280px;
   border-right: 1px solid var(--soft-line);
+  padding: clamp(26px, 3.4vw, 54px);
   color: rgba(255, 255, 255, 0.56);
-  font-size: clamp(1.3rem, 2vw, 2.4rem);
+  font-size: clamp(1.45rem, 2.05vw, 2.7rem);
   font-weight: 800;
+  isolation: isolate;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+.object-band span::before {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: -1;
+  color: rgba(255, 255, 255, 0.06);
+  font-size: clamp(4rem, 6vw, 7rem);
+  font-weight: 900;
+  line-height: 1;
+  content: attr(data-index);
+}
+
+.object-band span:hover {
+  background: rgba(158, 203, 255, 0.055);
+  color: rgba(255, 255, 255, 0.84);
 }
 
 .object-band b {
   font: inherit;
+  line-height: 1.08;
 }
 
 .object-band small {
@@ -525,19 +553,36 @@ svg {
 
 .people-grid-page {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
 .people-card {
-  min-height: 390px;
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  column-gap: 22px;
+  align-items: start;
+  min-height: 176px;
   border: 1px solid var(--line);
-  padding: clamp(28px, 3.4vw, 54px);
+  padding: clamp(18px, 2vw, 26px);
   background: rgba(255, 255, 255, 0.025);
+  transition:
+    border-color 0.28s ease,
+    background 0.28s ease,
+    transform 0.28s ease;
+}
+
+.people-card:hover {
+  border-color: rgba(158, 203, 255, 0.74);
+  background: rgba(158, 203, 255, 0.045);
+  transform: translateY(-3px);
 }
 
 .people-card figure {
-  margin: 0 0 28px;
+  grid-row: 1 / span 4;
+  width: 92px;
+  height: 124px;
+  margin: 0;
   overflow: hidden;
   border: 1px solid var(--soft-line);
   background: #111;
@@ -545,7 +590,7 @@ svg {
 
 .people-card img {
   width: 100%;
-  aspect-ratio: 1 / 1.12;
+  height: 100%;
   object-fit: cover;
   filter: grayscale(1) brightness(0.62) contrast(1.1);
 }
@@ -556,21 +601,22 @@ svg {
 }
 
 .people-card h2 {
-  margin: 72px 0 10px;
-  font-size: clamp(1.6rem, 2.4vw, 3rem);
-  line-height: 1;
+  margin: 8px 0 8px;
+  font-size: clamp(1.35rem, 1.7vw, 2rem);
+  line-height: 1.08;
 }
 
 .people-card h3 {
-  margin: 0 0 26px;
+  margin: 0 0 10px;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .people-card p {
   margin: 0;
   color: rgba(255, 255, 255, 0.66);
-  line-height: 1.75;
+  font-size: 0.95rem;
+  line-height: 1.65;
 }
 
 .works-page {
@@ -710,6 +756,16 @@ svg {
   max-height: 72vh;
   object-fit: cover;
   filter: grayscale(1) brightness(0.64) contrast(1.12);
+}
+
+.people-detail .detail-hero {
+  width: min(240px, 100%);
+  justify-self: start;
+}
+
+.people-detail .detail-hero img {
+  aspect-ratio: 3 / 4;
+  max-height: none;
 }
 
 .detail-fields {
@@ -1033,13 +1089,13 @@ svg {
 }
 
 .reveal-item {
-  opacity: 0;
-  transform: translateY(50px);
+  opacity: 1;
+  transform: none;
 }
 
 .admin-screen {
   min-height: 100vh;
-  padding: clamp(28px, 4vw, 72px);
+  padding: clamp(22px, 3.4vw, 56px);
   background:
     linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
@@ -1077,8 +1133,8 @@ svg {
 .admin-login-box h1,
 .admin-toolbar h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 5.4rem);
-  line-height: 0.95;
+  font-size: clamp(2rem, 3.4vw, 4rem);
+  line-height: 1;
 }
 
 .admin-login-box button,
@@ -1108,9 +1164,9 @@ svg {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 42px;
+  margin-bottom: 18px;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 28px;
+  padding-bottom: 22px;
 }
 
 .admin-actions {
@@ -1124,24 +1180,56 @@ svg {
   color: #fff;
 }
 
+.admin-quicknav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--soft-line);
+  padding: 12px 0;
+  background:
+    linear-gradient(rgba(5, 5, 5, 0.94), rgba(5, 5, 5, 0.94)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 48px);
+}
+
+.admin-quicknav a {
+  border: 1px solid var(--soft-line);
+  padding: 9px 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.admin-quicknav a:hover {
+  border-color: rgba(158, 203, 255, 0.72);
+  color: #fff;
+}
+
 .admin-panel {
-  margin-bottom: 28px;
+  scroll-margin-top: 92px;
+  margin-bottom: 22px;
   border: 1px solid var(--line);
-  padding: clamp(22px, 3vw, 38px);
-  background: rgba(255, 255, 255, 0.025);
+  padding: clamp(20px, 2.4vw, 32px);
+  background: rgba(255, 255, 255, 0.032);
 }
 
 .admin-panel h2 {
-  margin: 0 0 22px;
-  font-size: clamp(1.4rem, 2vw, 2.4rem);
+  margin: 0 0 18px;
+  border-bottom: 1px solid var(--soft-line);
+  padding-bottom: 14px;
+  font-size: clamp(1.25rem, 1.6vw, 2rem);
 }
 
 .admin-section-block {
   display: grid;
   gap: 18px;
   margin-top: 28px;
-  border-top: 1px solid var(--soft-line);
-  padding-top: 24px;
+  border: 1px solid var(--soft-line);
+  padding: clamp(16px, 2vw, 24px);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .admin-section-head,
@@ -1156,6 +1244,8 @@ svg {
 .admin-section-head h2,
 .admin-section-head h3 {
   margin: 0;
+  border: 0;
+  padding: 0;
 }
 
 .admin-section-head button,
@@ -1190,7 +1280,7 @@ svg {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1224,23 +1314,33 @@ svg {
 
 .admin-work-card {
   display: grid;
-  grid-template-columns: minmax(240px, 0.36fr) 1fr;
+  grid-template-columns: 160px 1fr;
   gap: 20px;
-  border-top: 1px solid var(--soft-line);
-  padding-top: 18px;
+  border: 1px solid var(--soft-line);
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .admin-work-card figure {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--soft-line);
   background: #111;
 }
 
+.admin-work-card figure:empty::after {
+  content: "未上传图片";
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .admin-work-card img {
   width: 100%;
-  height: 100%;
-  min-height: 260px;
+  height: 180px;
   object-fit: cover;
 }
 
@@ -1458,15 +1558,19 @@ svg {
   }
 
   .object-band {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    min-height: auto;
   }
 
-  .object-band span:nth-child(2) {
+  .object-band span {
+    min-height: 126px;
     border-right: 0;
+    border-bottom: 1px solid var(--soft-line);
+    padding: 24px;
   }
 
-  .object-band span:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--soft-line);
+  .object-band span:last-child {
+    border-bottom: 0;
   }
 
   .people-grid-page {
@@ -1475,14 +1579,6 @@ svg {
 
   .board-hub {
     grid-template-columns: 1fr;
-  }
-
-  .people-card {
-    min-height: 300px;
-  }
-
-  .people-card h2 {
-    margin-top: 48px;
   }
 
   .board-head {
@@ -1517,6 +1613,10 @@ svg {
 
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-work-card figure {
+    width: min(180px, 100%);
   }
 }
 
