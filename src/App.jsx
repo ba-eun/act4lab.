@@ -432,13 +432,14 @@ function AboutPage() {
 function PeoplePage() {
   const content = useSiteContent();
   const people = visiblePeople(content.people);
+  const [selectedPerson, setSelectedPerson] = useState(null);
   return (
     <PageShell title="People">
       <div className="people-page reveal-section">
         <span className="professor-label">PEOPLE</span>
         <div className="people-grid-page">
-          {people.map((person, index) => (
-            <a className="people-card" href={`/people/${person.id || makeId(person.name)}`} key={person.id || person.name}>
+          {people.map((person) => (
+            <button className="people-card" type="button" onClick={() => setSelectedPerson(person)} key={person.id || person.name}>
               {person.photo ? (
                 <figure>
                   <img src={person.photo} alt="" />
@@ -447,11 +448,60 @@ function PeoplePage() {
               {hasText(person.name) ? <h2>{person.name}</h2> : null}
               {person.interests ? <h3>{person.interests}</h3> : null}
               {person.history ? <p>{person.history}</p> : null}
-            </a>
+            </button>
           ))}
         </div>
       </div>
+      {selectedPerson ? <PeopleModal person={selectedPerson} onClose={() => setSelectedPerson(null)} /> : null}
     </PageShell>
+  );
+}
+
+function PeopleModal({ person, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  const fields = [
+    ["Name", person.name],
+    ["E-mail", person.email],
+    ["Interests", person.interests],
+    ["Academic ability", person.history],
+    ["Major career", person.experience],
+  ].filter(([, value]) => hasText(value));
+
+  return (
+    <div className="people-modal" role="dialog" aria-modal="true" aria-label={person.name || "People detail"} onMouseDown={onClose}>
+      <article className="people-modal-panel" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="people-modal-head">
+          <strong>{person.name || "People"}</strong>
+          <button type="button" aria-label="Close" onClick={onClose}>
+            <X size={24} />
+          </button>
+        </header>
+        {hasText(person.photo) ? (
+          <figure className="people-modal-photo">
+            <img src={person.photo} alt="" />
+          </figure>
+        ) : null}
+        <div className="people-modal-fields">
+          {fields.map(([label, value]) => (
+            <section className="people-modal-field" key={label}>
+              <span>{label}</span>
+              <p>{value}</p>
+            </section>
+          ))}
+        </div>
+      </article>
+    </div>
   );
 }
 

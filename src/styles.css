@@ -563,10 +563,14 @@ svg {
   grid-template-columns: 1fr;
   gap: 10px;
   align-content: start;
+  justify-items: start;
   min-height: 0;
   border: 1px solid var(--line);
   padding: clamp(10px, 1.2vw, 16px);
   background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
   transition:
     border-color 0.28s ease,
     background 0.28s ease,
@@ -580,7 +584,7 @@ svg {
 }
 
 .people-card figure {
-  width: 100%;
+  width: min(88px, 100%);
   aspect-ratio: 3 / 4;
   margin: 0;
   overflow: hidden;
@@ -592,7 +596,7 @@ svg {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(1) brightness(0.62) contrast(1.1);
+  filter: brightness(0.92) contrast(1.04);
 }
 
 .people-card span {
@@ -618,6 +622,91 @@ svg {
   color: rgba(255, 255, 255, 0.66);
   font-size: clamp(0.72rem, 0.8vw, 0.88rem);
   line-height: 1.5;
+}
+
+.people-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 54px);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.people-modal-panel {
+  width: min(980px, 100%);
+  max-height: min(860px, 90vh);
+  overflow: auto;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(rgba(5, 5, 5, 0.94), rgba(5, 5, 5, 0.94)),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+.people-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 18px clamp(20px, 3vw, 36px);
+  background: #000;
+}
+
+.people-modal-head strong {
+  font-size: clamp(1.1rem, 1.7vw, 1.8rem);
+}
+
+.people-modal-head button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.74);
+  cursor: pointer;
+}
+
+.people-modal-photo {
+  display: grid;
+  justify-items: center;
+  margin: 0;
+  border-bottom: 1px solid var(--soft-line);
+  padding: clamp(24px, 4vw, 48px);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.people-modal-photo img {
+  width: min(220px, 58vw);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  filter: none;
+}
+
+.people-modal-fields {
+  padding: 0 clamp(20px, 3vw, 36px) clamp(20px, 3vw, 36px);
+}
+
+.people-modal-field {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: clamp(20px, 3vw, 42px);
+  border-bottom: 1px solid var(--soft-line);
+  padding: 18px 0;
+}
+
+.people-modal-field span {
+  color: var(--primary-2);
+  font-weight: 900;
+}
+
+.people-modal-field p {
+  white-space: pre-line;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.72;
 }
 
 .works-page {
@@ -767,6 +856,7 @@ svg {
 .people-detail .detail-hero img {
   aspect-ratio: 3 / 4;
   max-height: none;
+  filter: none;
 }
 
 .detail-fields {
@@ -1645,6 +1735,11 @@ svg {
 
   .people-card {
     padding: 8px;
+  }
+
+  .people-modal-field {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 
