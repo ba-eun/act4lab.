@@ -447,7 +447,6 @@ function PeoplePage() {
               ) : null}
               {hasText(person.name) ? <h2>{person.name}</h2> : null}
               {person.interests ? <h3>{person.interests}</h3> : null}
-              {person.history ? <p>{person.history}</p> : null}
             </button>
           ))}
         </div>
