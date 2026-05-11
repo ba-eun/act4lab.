@@ -71,6 +71,22 @@ function hasText(value) {
   return String(value || "").trim().length > 0;
 }
 
+function hasAnyText(item, keys) {
+  return keys.some((key) => hasText(item?.[key]));
+}
+
+function visiblePeople(people = []) {
+  return people.filter((person) => hasAnyText(person, ["photo", "name", "email", "interests", "history", "experience"]));
+}
+
+function visibleWorks(works = []) {
+  return works.filter((work) => hasAnyText(work, ["image", "title", "date", "text", "people", "body"]));
+}
+
+function visibleBoardItems(content, section) {
+  return getBoardItems(content, section).filter((item) => hasAnyText(item, ["image", "title", "date", "intro", "people", "body"]));
+}
+
 function notifyContentUpdated() {
   window.dispatchEvent(new Event(CONTENT_UPDATED_EVENT));
   try {
@@ -272,6 +288,9 @@ function PageShell({ title, children }) {
 
 function HomePage() {
   const content = useSiteContent();
+  const news = visibleBoardItems(content, "news");
+  const works = visibleWorks(content.works);
+  const projects = visibleBoardItems(content, "project");
   useReveal();
   return (
     <main id="top" className="main">
@@ -299,7 +318,7 @@ function HomePage() {
       </section>
 
       <div className="lab-intro container reveal-section">
-        {content.homeIntro.map((paragraph) => (
+        {content.homeIntro.filter(hasText).map((paragraph) => (
           <p className="reveal-item" key={paragraph}>
             {paragraph}
           </p>
@@ -310,12 +329,12 @@ function HomePage() {
         <section className="news reveal-section">
           <MainTitle href="/board/news">News</MainTitle>
           <ul className="news-list">
-            {(content.board?.news || []).map((item) => (
+            {news.map((item) => (
               <li className="reveal-item" key={item.id || item.title}>
                 <a href={`/board/news/${item.id || makeId(item.title)}`}>
-                  <span className="subj">{item.title}</span>
-                  <span className="cont">{item.intro || item.body}</span>
-                  <span className="date">{item.date}</span>
+                  {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
+                  {hasText(item.intro || item.body) ? <span className="cont">{item.intro || item.body}</span> : null}
+                  {hasText(item.date) ? <span className="date">{item.date}</span> : null}
                 </a>
               </li>
             ))}
@@ -325,16 +344,18 @@ function HomePage() {
         <section className="exhibition reveal-section">
           <MainTitle href="/works">Works</MainTitle>
           <ul className="exhibition-list">
-            {content.works.map((item) => (
+            {works.map((item) => (
               <li className="reveal-item" key={item.id || item.title}>
                 <a href={`/works/${item.id || makeId(item.title)}`}>
                   <div className="item">
-                    <span className="subj">{item.title}</span>
-                    <span className="date">{item.date}</span>
+                    {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
+                    {hasText(item.date) ? <span className="date">{item.date}</span> : null}
                   </div>
-                  <span className="thumb">
-                    <img src={item.image} alt="" />
-                  </span>
+                  {hasText(item.image) ? (
+                    <span className="thumb">
+                      <img src={item.image} alt="" />
+                    </span>
+                  ) : null}
                 </a>
               </li>
             ))}
@@ -347,10 +368,10 @@ function HomePage() {
         <section className="project reveal-section">
           <MainTitle href="/board/project">Project</MainTitle>
           <ul className="project-list">
-            {(content.board?.projects || []).map((item) => (
+            {projects.map((item) => (
               <li className="reveal-item" key={item.id || item.title}>
                 <a href={`/board/project/${item.id || makeId(item.title)}`}>
-                  <span className="subj">{item.title}</span>
+                  {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
                 </a>
               </li>
             ))}
@@ -363,17 +384,20 @@ function HomePage() {
 
 function AboutPage() {
   const content = useSiteContent();
+  const sections = content.about.sections
+    .map((section) => ({ ...section, paragraphs: (section.paragraphs || []).filter(hasText) }))
+    .filter((section) => hasText(section.title) || section.paragraphs.length);
   return (
     <PageShell title="About LAB">
       <div className="about-lab">
         <div className="sub-slogan">
-          <p>{content.about.label}</p>
-          <p>{content.about.title}</p>
+          {hasText(content.about.label) ? <p>{content.about.label}</p> : null}
+          {hasText(content.about.title) ? <p>{content.about.title}</p> : null}
         </div>
-        {content.about.sections.map((section) => (
+        {sections.map((section) => (
           <section className="cont-group reveal-section" key={section.number}>
-            <p className="num reveal-item">{section.number}</p>
-            <p className="subj reveal-item">{section.title}</p>
+            {hasText(section.number) ? <p className="num reveal-item">{section.number}</p> : null}
+            {hasText(section.title) ? <p className="subj reveal-item">{section.title}</p> : null}
             <div className="reveal-item">
               {section.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
@@ -407,20 +431,20 @@ function AboutPage() {
 
 function PeoplePage() {
   const content = useSiteContent();
+  const people = visiblePeople(content.people);
   return (
     <PageShell title="People">
       <div className="people-page reveal-section">
-        <span className="professor-label reveal-item">PEOPLE</span>
+        <span className="professor-label">PEOPLE</span>
         <div className="people-grid-page">
-          {content.people.map((person, index) => (
-            <a className="people-card reveal-item" href={`/people/${person.id || makeId(person.name)}`} key={person.id || person.name}>
+          {people.map((person, index) => (
+            <a className="people-card" href={`/people/${person.id || makeId(person.name)}`} key={person.id || person.name}>
               {person.photo ? (
                 <figure>
                   <img src={person.photo} alt="" />
                 </figure>
               ) : null}
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <h2>{person.name}</h2>
+              {hasText(person.name) ? <h2>{person.name}</h2> : null}
               {person.interests ? <h3>{person.interests}</h3> : null}
               {person.history ? <p>{person.history}</p> : null}
             </a>
@@ -435,6 +459,12 @@ function PeopleDetailPage({ id }) {
   const content = useSiteContent();
   const person = findById(content.people || [], id, "name");
   if (!person) return <NotFoundPage />;
+  const fields = [
+    ["Email", person.email],
+    ["兴趣方向", person.interests],
+    ["经历", person.history],
+    ["经验", person.experience],
+  ].filter(([, value]) => hasText(value));
   return (
     <PageShell title={person.name || "People"}>
       <article className="detail-page people-detail reveal-section">
@@ -443,21 +473,16 @@ function PeopleDetailPage({ id }) {
             <img src={person.photo} alt="" />
           </figure>
         ) : null}
-        <div className="detail-fields">
-          {[
-            ["Email", person.email],
-            ["兴趣方向", person.interests],
-            ["经历", person.history],
-            ["经验", person.experience],
-          ]
-            .filter(([, value]) => hasText(value))
-            .map(([label, value]) => (
-              <section className="detail-field reveal-item" key={label}>
-                <span>{label}</span>
-                <p>{value}</p>
-              </section>
-            ))}
-        </div>
+        {fields.length ? (
+          <div className="detail-fields">
+            {fields.map(([label, value]) => (
+                <section className="detail-field reveal-item" key={label}>
+                  <span>{label}</span>
+                  <p>{value}</p>
+                </section>
+              ))}
+          </div>
+        ) : null}
       </article>
     </PageShell>
   );
@@ -465,18 +490,21 @@ function PeopleDetailPage({ id }) {
 
 function WorksPage() {
   const content = useSiteContent();
+  const works = visibleWorks(content.works);
   return (
     <PageShell title="Works">
       <div className="works-page reveal-section">
-        {content.works.map((item) => (
+        {works.map((item) => (
           <a className="work-row reveal-item" href={`/works/${item.id || makeId(item.title)}`} key={item.id || item.title}>
-            <figure>
-              <img src={item.image} alt="" />
-            </figure>
+            {hasText(item.image) ? (
+              <figure>
+                <img src={item.image} alt="" />
+              </figure>
+            ) : null}
             <div>
-              <span>{item.date}</span>
-              <h2>{item.title}</h2>
-              <p>{item.text}</p>
+              {hasText(item.date) ? <span>{item.date}</span> : null}
+              {hasText(item.title) ? <h2>{item.title}</h2> : null}
+              {hasText(item.text) ? <p>{item.text}</p> : null}
             </div>
           </a>
         ))}
@@ -510,7 +538,7 @@ function BoardPage() {
           <a className="board-hub-card reveal-item" href={section.path} key={key}>
             <span>{String(index + 1).padStart(2, "0")}</span>
             <strong>{section.title}</strong>
-            <p>{getBoardItems(content, key).length} ITEMS</p>
+            <p>{visibleBoardItems(content, key).length} ITEMS</p>
           </a>
         ))}
       </div>
@@ -522,6 +550,7 @@ function BoardListPage({ section }) {
   const content = useSiteContent();
   const meta = boardSections[section];
   if (!meta) return <NotFoundPage />;
+  const items = visibleBoardItems(content, section);
   return (
     <PageShell title={meta.title}>
       <div className="board-page reveal-section">
@@ -530,11 +559,11 @@ function BoardListPage({ section }) {
           <span>TITLE</span>
           <span>INTRO</span>
         </div>
-        {getBoardItems(content, section).map((item) => (
+        {items.map((item) => (
           <a className="board-row reveal-item" href={`${meta.path}/${item.id || makeId(item.title)}`} key={item.id || item.title}>
-            <span>{item.date}</span>
-            <strong>{item.title}</strong>
-            <p>{item.intro || item.body}</p>
+            {hasText(item.date) ? <span>{item.date}</span> : <span />}
+            {hasText(item.title) ? <strong>{item.title}</strong> : <strong />}
+            {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : <p />}
           </a>
         ))}
       </div>
@@ -560,6 +589,7 @@ function BoardDetailPage({ section, id }) {
 }
 
 function DetailArticle({ image, fields }) {
+  const visibleFields = fields.filter(([, value]) => hasText(value));
   return (
     <article className="detail-page reveal-section">
       {image ? (
@@ -567,37 +597,36 @@ function DetailArticle({ image, fields }) {
           <img src={image} alt="" />
         </figure>
       ) : null}
-      <div className="detail-fields">
-        {fields
-          .filter(([, value]) => hasText(value))
-          .map(([label, value]) => (
+      {visibleFields.length ? (
+        <div className="detail-fields">
+          {visibleFields.map(([label, value]) => (
             <section className="detail-field reveal-item" key={label}>
               <span>{label}</span>
               <p>{value}</p>
             </section>
           ))}
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }
 
 function ContactPage() {
   const content = useSiteContent();
+  const fields = [
+    ["地址", content.site.contactAddress],
+    ["邮箱", content.site.contactEmail],
+    ["方向", content.site.contactDirections],
+  ].filter(([, value]) => hasText(value));
   return (
     <PageShell title="Contact">
       <div className="contact-container reveal-section">
-        <div className="item reveal-item">
-          <span className="label">地址</span>
-          <p className="address">{content.site.contactAddress}</p>
-        </div>
-        <div className="item reveal-item">
-          <span className="label">邮箱</span>
-          <p className="address">{content.site.contactEmail}</p>
-        </div>
-        <div className="item reveal-item">
-          <span className="label">方向</span>
-          <p className="address">{content.site.contactDirections}</p>
-        </div>
+        {fields.map(([label, value]) => (
+          <div className="item reveal-item" key={label}>
+            <span className="label">{label}</span>
+            <p className="address">{value}</p>
+          </div>
+        ))}
       </div>
     </PageShell>
   );
@@ -665,7 +694,7 @@ function AdminPage() {
       .then((response) => response.json())
       .then((data) => setDraft(data))
       .catch(() => setDraft(publicContent));
-  }, [loggedIn, publicContent]);
+  }, [loggedIn]);
 
   const save = async () => {
     setSaving(true);
@@ -725,7 +754,7 @@ function AdminPage() {
     setDraft((current) => ({
       ...current,
       works: current.works.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [key]: value, id: key === "title" ? makeId(value) : item.id } : item,
+        itemIndex === index ? { ...item, [key]: value } : item,
       ),
     }));
   };
@@ -734,7 +763,7 @@ function AdminPage() {
     setDraft((current) => ({
       ...current,
       people: current.people.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [key]: value, id: key === "name" ? makeId(value) : item.id } : item,
+        itemIndex === index ? { ...item, [key]: value } : item,
       ),
     }));
   };
@@ -745,7 +774,7 @@ function AdminPage() {
       board: {
         ...current.board,
         [sectionKey]: current.board[sectionKey].map((item, itemIndex) =>
-          itemIndex === index ? { ...item, [key]: value, id: key === "title" ? makeId(value) : item.id } : item,
+          itemIndex === index ? { ...item, [key]: value } : item,
         ),
       },
     }));
@@ -808,11 +837,11 @@ function AdminPage() {
         <section className="admin-panel" id="admin-site">
           <h2>基础信息</h2>
           <div className="admin-grid">
-            <TextInput label="顶部细条文案" value={draft.site.topLine} onChange={(value) => setDraft({ ...draft, site: { ...draft.site, topLine: value } })} />
-            <TextInput label="联系邮箱" value={draft.site.contactEmail} onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactEmail: value } })} />
-            <TextInput label="联系地址" value={draft.site.contactAddress} multiline onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactAddress: value } })} />
-            <TextInput label="联系方向" value={draft.site.contactDirections} multiline onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactDirections: value } })} />
-            <TextInput label="页脚说明" value={draft.site.footerTagline} multiline onChange={(value) => setDraft({ ...draft, site: { ...draft.site, footerTagline: value } })} />
+            <TextInput label="顶部细条文案" value={draft.site.topLine} onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, topLine: value } }))} />
+            <TextInput label="联系邮箱" value={draft.site.contactEmail} onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, contactEmail: value } }))} />
+            <TextInput label="联系地址" value={draft.site.contactAddress} multiline onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, contactAddress: value } }))} />
+            <TextInput label="联系方向" value={draft.site.contactDirections} multiline onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, contactDirections: value } }))} />
+            <TextInput label="页脚说明" value={draft.site.footerTagline} multiline onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, footerTagline: value } }))} />
           </div>
         </section>
 
@@ -820,7 +849,7 @@ function AdminPage() {
           <h2>首页介绍</h2>
           <div className="admin-grid">
             {draft.homeIntro.map((paragraph, index) => (
-              <TextInput key={index} label={`段落 ${index + 1}`} value={paragraph} multiline onChange={(value) => setDraft({ ...draft, homeIntro: draft.homeIntro.map((item, itemIndex) => itemIndex === index ? value : item) })} />
+              <TextInput key={index} label={`段落 ${index + 1}`} value={paragraph} multiline onChange={(value) => setDraft((current) => ({ ...current, homeIntro: current.homeIntro.map((item, itemIndex) => itemIndex === index ? value : item) }))} />
             ))}
           </div>
         </section>

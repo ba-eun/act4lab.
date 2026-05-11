@@ -553,18 +553,19 @@ svg {
 
 .people-grid-page {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(10px, 1.3vw, 18px);
+  margin-top: 18px;
 }
 
 .people-card {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  column-gap: 22px;
-  align-items: start;
-  min-height: 176px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-content: start;
+  min-height: 0;
   border: 1px solid var(--line);
-  padding: clamp(18px, 2vw, 26px);
+  padding: clamp(10px, 1.2vw, 16px);
   background: rgba(255, 255, 255, 0.025);
   transition:
     border-color 0.28s ease,
@@ -579,9 +580,8 @@ svg {
 }
 
 .people-card figure {
-  grid-row: 1 / span 4;
-  width: 92px;
-  height: 124px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--soft-line);
@@ -601,22 +601,23 @@ svg {
 }
 
 .people-card h2 {
-  margin: 8px 0 8px;
-  font-size: clamp(1.35rem, 1.7vw, 2rem);
-  line-height: 1.08;
+  margin: 4px 0 0;
+  font-size: clamp(0.98rem, 1.15vw, 1.35rem);
+  line-height: 1.18;
 }
 
 .people-card h3 {
-  margin: 0 0 10px;
+  margin: 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 0.95rem;
+  font-size: clamp(0.72rem, 0.82vw, 0.9rem);
+  line-height: 1.45;
 }
 
 .people-card p {
   margin: 0;
   color: rgba(255, 255, 255, 0.66);
-  font-size: 0.95rem;
-  line-height: 1.65;
+  font-size: clamp(0.72rem, 0.8vw, 0.88rem);
+  line-height: 1.5;
 }
 
 .works-page {
@@ -1573,10 +1574,6 @@ svg {
     border-bottom: 0;
   }
 
-  .people-grid-page {
-    grid-template-columns: 1fr;
-  }
-
   .board-hub {
     grid-template-columns: 1fr;
   }
@@ -1640,6 +1637,14 @@ svg {
 
   .news-list a {
     padding: 30px;
+  }
+
+  .people-grid-page {
+    gap: 8px;
+  }
+
+  .people-card {
+    padding: 8px;
   }
 }
 
