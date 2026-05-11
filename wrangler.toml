@@ -1,0 +1,7 @@
+name = "act4lab"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-12-01"
+
+[[kv_namespaces]]
+binding = "ACT4_CONTENT"
+id = "e5214a1556a84ca6934379f72c947e8b"

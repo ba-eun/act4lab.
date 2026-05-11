@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1044">
+  <rect width="900" height="1044" fill="#080808"/>
+  <g stroke="#fff" stroke-opacity=".42" fill="none">
+    <path d="M178 278h544v374H178z" stroke-width="2"/>
+    <path d="M178 372h544M292 278v374M450 278v374M608 278v374" stroke-width="1"/>
+    <circle cx="292" cy="372" r="58" stroke-width="2"/>
+    <circle cx="608" cy="558" r="58" stroke-width="2"/>
+    <path d="M350 372h200M550 558H350M450 430v72" stroke-width="3"/>
+  </g>
+  <g fill="#fff" fill-opacity=".12">
+    <rect x="218" y="710" width="464" height="72"/>
+    <rect x="278" y="156" width="344" height="72"/>
+  </g>
+  <g fill="#fff">
+    <text x="78" y="930" font-family="Arial, sans-serif" font-size="72" font-weight="900">DIALOGUE</text>
+    <text x="78" y="986" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill-opacity=".7">INTERACTIVE EXPERIENCE</text>
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1044">
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0V60" fill="none" stroke="#fff" stroke-opacity=".08"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="1044" fill="#090909"/>
+  <rect width="900" height="1044" fill="url(#grid)"/>
+  <g fill="none" stroke="#f5f5f5" stroke-width="2" stroke-opacity=".56">
+    <rect x="122" y="164" width="656" height="656"/>
+    <rect x="218" y="260" width="464" height="464"/>
+    <path d="M122 164 778 820M778 164 122 820"/>
+    <circle cx="450" cy="492" r="204"/>
+    <path d="M450 164v656M122 492h656"/>
+  </g>
+  <g fill="#fff">
+    <text x="78" y="930" font-family="Arial, sans-serif" font-size="72" font-weight="900">GAZE</text>
+    <text x="78" y="986" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill-opacity=".7">VISUAL ORDER SYSTEM</text>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+{
+  "name": "act-iv-future-visual-lab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "start": "node server.js",
+    "serve": "npm run build && node server.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "gsap": "^3.14.2",
+    "lucide-react": "^0.561.0",
+    "multer": "^2.1.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "three": "^0.181.2",
+    "vite": "^7.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18"
+  }
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1044">
+  <rect width="900" height="1044" fill="#050505"/>
+  <g fill="none" stroke="#fff" stroke-opacity=".46">
+    <path d="M206 718 694 230" stroke-width="8"/>
+    <path d="M206 230 694 718" stroke-width="8"/>
+    <circle cx="450" cy="474" r="278" stroke-width="2"/>
+    <circle cx="450" cy="474" r="176" stroke-width="2"/>
+    <path d="M450 196v556M172 474h556" stroke-width="1"/>
+  </g>
+  <g fill="none" stroke="#fff" stroke-opacity=".18">
+    <path d="M100 190c240 116 460 116 700 0M100 758c240-116 460-116 700 0" stroke-width="2"/>
+    <path d="M100 246c240 116 460 116 700 0M100 702c240-116 460-116 700 0" stroke-width="2"/>
+  </g>
+  <g fill="#fff">
+    <text x="78" y="930" font-family="Arial, sans-serif" font-size="72" font-weight="900">BREAK</text>
+    <text x="78" y="986" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill-opacity=".7">CROSS-MEDIA FIELD</text>
+  </g>
+</svg>

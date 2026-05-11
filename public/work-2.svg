@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1044">
+  <rect width="900" height="1044" fill="#060606"/>
+  <g fill="none" stroke="#fff" stroke-width="2" stroke-opacity=".5">
+    <path d="M78 228c150-120 252 120 398 0s258 120 346 0"/>
+    <path d="M78 336c150-120 252 120 398 0s258 120 346 0"/>
+    <path d="M78 444c150-120 252 120 398 0s258 120 346 0"/>
+    <path d="M78 552c150-120 252 120 398 0s258 120 346 0"/>
+    <path d="M78 660c150-120 252 120 398 0s258 120 346 0"/>
+  </g>
+  <g fill="#fff" fill-opacity=".18">
+    <circle cx="258" cy="354" r="116"/>
+    <circle cx="562" cy="548" r="164"/>
+    <circle cx="706" cy="280" r="64"/>
+  </g>
+  <g fill="#fff">
+    <text x="78" y="930" font-family="Arial, sans-serif" font-size="72" font-weight="900">FLOW</text>
+    <text x="78" y="986" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill-opacity=".7">MOTION NARRATIVE</text>
+  </g>
+</svg>
