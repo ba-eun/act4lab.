@@ -111,6 +111,39 @@ function readRequestScope(request) {
   };
 }
 
+function uploadKeyFromUrl(value) {
+  const url = typeof value === "object" && value ? value.url : value;
+  const match = String(url || "").match(/\/uploads\/([^?#]+)/);
+  const key = match ? decodeURIComponent(match[1]) : "";
+  return key && !/[\\/]/.test(key) ? key : "";
+}
+
+function collectUploadKeys(value, keys = new Set()) {
+  if (!value) return keys;
+  if (typeof value === "string") {
+    const key = uploadKeyFromUrl(value);
+    if (key) keys.add(key);
+    return keys;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectUploadKeys(item, keys));
+    return keys;
+  }
+  if (typeof value === "object") {
+    const key = uploadKeyFromUrl(value);
+    if (key) keys.add(key);
+    Object.values(value).forEach((item) => collectUploadKeys(item, keys));
+  }
+  return keys;
+}
+
+async function deleteUnreferencedUploads(env, before, after) {
+  if (!env.ACT4_CONTENT) return;
+  const beforeKeys = collectUploadKeys(before);
+  const afterKeys = collectUploadKeys(after);
+  await Promise.all([...beforeKeys].filter((key) => !afterKeys.has(key)).map((key) => env.ACT4_CONTENT.delete(`upload:${key}`)));
+}
+
 export async function onRequestGet({ request, env }) {
   const stored = await env.ACT4_CONTENT?.get(CONTENT_KEY);
   const scope = readRequestScope(request);
@@ -125,10 +158,12 @@ export async function onRequestPut({ request, env }) {
   const scope = readRequestScope(request);
   if (!scope.pagePath) return json({ error: "Missing pagePath" }, { status: 400 });
   const body = await request.json().catch(() => ({}));
+  const previous = await env.ACT4_CONTENT?.get(CONTENT_KEY, { type: "json" }).catch(() => null);
   const content = {
     ...safeContent(body),
     updatedAt: new Date().toISOString(),
   };
   await env.ACT4_CONTENT.put(CONTENT_KEY, JSON.stringify(content));
+  await deleteUnreferencedUploads(env, previous, content);
   return json({ ok: true, content, scope });
 }

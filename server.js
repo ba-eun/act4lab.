@@ -157,6 +157,38 @@ function safeContent(input) {
   };
 }
 
+function uploadKeyFromUrl(value) {
+  const url = typeof value === "object" && value ? value.url : value;
+  const match = String(url || "").match(/\/uploads\/([^?#]+)/);
+  const key = match ? decodeURIComponent(match[1]) : "";
+  return key && !/[\\/]/.test(key) ? key : "";
+}
+
+function collectUploadKeys(value, keys = new Set()) {
+  if (!value) return keys;
+  if (typeof value === "string") {
+    const key = uploadKeyFromUrl(value);
+    if (key) keys.add(key);
+    return keys;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectUploadKeys(item, keys));
+    return keys;
+  }
+  if (typeof value === "object") {
+    const key = uploadKeyFromUrl(value);
+    if (key) keys.add(key);
+    Object.values(value).forEach((item) => collectUploadKeys(item, keys));
+  }
+  return keys;
+}
+
+async function deleteUnreferencedUploads(before, after) {
+  const beforeKeys = collectUploadKeys(before);
+  const afterKeys = collectUploadKeys(after);
+  await Promise.all([...beforeKeys].filter((key) => !afterKeys.has(key)).map((key) => fs.rm(path.join(uploadsDir, key), { force: true }).catch(() => null)));
+}
+
 async function readContent() {
   const raw = await fs.readFile(contentFile, "utf8");
   return safeContent(JSON.parse(raw));
@@ -175,14 +207,7 @@ const upload = multer({
     },
   }),
   limits: {
-    fileSize: 12 * 1024 * 1024,
-  },
-  fileFilter: (_req, file, callback) => {
-    if (!file.mimetype.startsWith("image/")) {
-      callback(new Error("Only image uploads are allowed"));
-      return;
-    }
-    callback(null, true);
+    fileSize: 24 * 1024 * 1024,
   },
 });
 
@@ -238,17 +263,26 @@ app.get("/api/content", async (req, res) => {
 app.put("/api/content", requireAuth, async (req, res) => {
   const scope = readRequestScope(req);
   if (!scope.pagePath) return res.status(400).json({ error: "Missing pagePath" });
+  const previous = await readContent();
   const content = {
     ...safeContent(req.body || {}),
     updatedAt: new Date().toISOString(),
   };
   await writeContent(content);
+  await deleteUnreferencedUploads(previous, content);
   res.json({ ok: true, content, scope });
 });
 
-app.post("/api/upload", requireAuth, upload.single("image"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No image uploaded" });
-  res.json({ url: `/uploads/${req.file.filename}` });
+app.post("/api/upload", requireAuth, upload.any(), (req, res) => {
+  const file = req.files?.[0];
+  if (!file) return res.status(400).json({ error: "No file uploaded" });
+  const attachment = {
+    url: `/uploads/${file.filename}`,
+    name: file.originalname || file.filename,
+    size: file.size,
+    type: file.mimetype || "application/octet-stream",
+  };
+  res.json({ ...attachment, attachment });
 });
 
 app.use(express.static(path.join(rootDir, "dist")));

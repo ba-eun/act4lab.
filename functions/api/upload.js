@@ -5,23 +5,30 @@ export async function onRequestPost({ request, env }) {
   if (blocked) return blocked;
 
   const form = await request.formData();
-  const file = form.get("image");
-  if (!(file instanceof File) || !file.type.startsWith("image/")) {
-    return json({ error: "No image uploaded" }, { status: 400 });
+  const file = form.get("file") || form.get("image");
+  if (!(file instanceof File)) {
+    return json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  if (file.size > 12 * 1024 * 1024) {
-    return json({ error: "Image is too large" }, { status: 413 });
+  if (file.size > 24 * 1024 * 1024) {
+    return json({ error: "File is too large" }, { status: 413 });
   }
 
   const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "bin";
   const key = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+  const attachment = {
+    url: `/uploads/${key}`,
+    name: file.name || key,
+    size: file.size,
+    type: file.type || "application/octet-stream",
+  };
   await env.ACT4_CONTENT.put(`upload:${key}`, await file.arrayBuffer(), {
     metadata: {
-      contentType: file.type,
-      originalName: file.name,
+      contentType: attachment.type,
+      originalName: attachment.name,
+      size: attachment.size,
     },
   });
 
-  return json({ url: `/uploads/${key}` });
+  return json({ ...attachment, attachment });
 }

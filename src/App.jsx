@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Eye, ImagePlus, Loader2, LogOut, Menu, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Eye, FileText, Film, Loader2, LogOut, Menu, Music, Paperclip, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
@@ -127,6 +127,84 @@ function hasText(value) {
   return String(value || "").trim().length > 0;
 }
 
+const ATTACHMENT_FIELDS = new Set(["image", "photo", "logo"]);
+
+function attachmentUrl(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "object") return String(value.url || value.src || value.href || "").trim();
+  return "";
+}
+
+function fileNameFromUrl(url) {
+  const clean = String(url || "").split(/[?#]/)[0];
+  const name = clean.split("/").filter(Boolean).at(-1) || "attachment";
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}
+
+function inferMimeType(url = "") {
+  const ext = String(url).split(/[?#]/)[0].split(".").pop()?.toLowerCase() || "";
+  const map = {
+    avif: "image/avif",
+    gif: "image/gif",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    svg: "image/svg+xml",
+    webp: "image/webp",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    mov: "video/quicktime",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    ogg: "audio/ogg",
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    zip: "application/zip",
+    rar: "application/vnd.rar",
+    "7z": "application/x-7z-compressed",
+  };
+  return map[ext] || "";
+}
+
+function normalizeAttachment(value) {
+  const url = attachmentUrl(value);
+  if (!url) return null;
+  const metadata = typeof value === "object" && value ? value : {};
+  return {
+    url,
+    name: metadata.name || metadata.originalName || fileNameFromUrl(url),
+    size: Number(metadata.size || 0),
+    type: metadata.type || metadata.mime || metadata.contentType || inferMimeType(url),
+  };
+}
+
+function isPlaceholderMedia(value) {
+  const source = attachmentUrl(value);
+  if (!source) return false;
+  return /(^|\/)work-\d+\.svg(?:[?#].*)?$/i.test(source);
+}
+
+function hasMedia(value) {
+  return hasText(attachmentUrl(value)) && !isPlaceholderMedia(value);
+}
+
+function hasContentValue(item, key) {
+  const value = item?.[key];
+  if (Array.isArray(value)) return value.some(hasText);
+  if (ATTACHMENT_FIELDS.has(key)) return hasMedia(value);
+  return hasText(value);
+}
+
 function hasAnyText(item, keys) {
   return keys.some((key) => hasText(item?.[key]));
 }
@@ -138,11 +216,7 @@ const BOARD_CONTENT_FIELDS = ["image", ...BOARD_TEXT_FIELDS];
 const ABOUT_SECTION_FIELDS = ["number", "title", "paragraphs"];
 
 function hasAnyValue(item, keys) {
-  return keys.some((key) => {
-    const value = item?.[key];
-    if (Array.isArray(value)) return value.some(hasText);
-    return hasText(value);
-  });
+  return keys.some((key) => hasContentValue(item, key));
 }
 
 function isEmptyContentItem(item, keys) {
@@ -181,12 +255,90 @@ function EmptyEntryPlaceholder({ label = "空条目" }) {
   );
 }
 
-function EmptyMediaPlaceholder({ label = "空图片" }) {
+function EmptyMediaPlaceholder({ label = "点击上传附件" }) {
   return (
     <div className="admin-empty-media">
-      <ImagePlus size={18} />
+      <Paperclip size={18} />
       <span>{label}</span>
     </div>
+  );
+}
+
+function formatFileSize(size) {
+  if (!size) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let nextSize = Number(size);
+  let unitIndex = 0;
+  while (nextSize >= 1024 && unitIndex < units.length - 1) {
+    nextSize /= 1024;
+    unitIndex += 1;
+  }
+  return `${nextSize >= 10 || unitIndex === 0 ? Math.round(nextSize) : nextSize.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function isImageAttachment(attachment) {
+  return attachment.type?.startsWith("image/") || /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(attachment.url);
+}
+
+function isVideoAttachment(attachment) {
+  return attachment.type?.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(attachment.url);
+}
+
+function isAudioAttachment(attachment) {
+  return attachment.type?.startsWith("audio/") || /\.(mp3|ogg|wav)$/i.test(attachment.url);
+}
+
+function isPreviewableAttachment(attachment) {
+  return isImageAttachment(attachment) || isVideoAttachment(attachment) || isAudioAttachment(attachment) || attachment.type === "application/pdf" || /\.pdf$/i.test(attachment.url);
+}
+
+function AttachmentIcon({ attachment, size = 28 }) {
+  if (isVideoAttachment(attachment)) return <Film size={size} />;
+  if (isAudioAttachment(attachment)) return <Music size={size} />;
+  return <FileText size={size} />;
+}
+
+function AttachmentPreview({ value, className = "" }) {
+  const attachment = normalizeAttachment(value);
+  if (!attachment || !hasMedia(attachment)) return null;
+  const previewable = isPreviewableAttachment(attachment);
+  const openProps = previewable
+    ? { target: "_blank", rel: "noreferrer" }
+    : { download: attachment.name };
+
+  if (isImageAttachment(attachment)) {
+    return (
+      <a className={`attachment-preview attachment-image ${className}`.trim()} href={attachment.url} {...openProps}>
+        <img src={attachment.url} alt={attachment.name} />
+      </a>
+    );
+  }
+
+  if (isVideoAttachment(attachment)) {
+    return (
+      <div className={`attachment-preview attachment-video ${className}`.trim()}>
+        <video src={attachment.url} controls preload="metadata" />
+        <a href={attachment.url} {...openProps}>{attachment.name}</a>
+      </div>
+    );
+  }
+
+  if (isAudioAttachment(attachment)) {
+    return (
+      <div className={`attachment-preview attachment-audio ${className}`.trim()}>
+        <Music size={24} />
+        <audio src={attachment.url} controls preload="metadata" />
+        <a href={attachment.url} {...openProps}>{attachment.name}</a>
+      </div>
+    );
+  }
+
+  return (
+    <a className={`attachment-preview attachment-file ${className}`.trim()} href={attachment.url} {...openProps}>
+      <AttachmentIcon attachment={attachment} />
+      <span>{attachment.name}</span>
+      <small>{[formatFileSize(attachment.size), attachment.type || "file"].filter(Boolean).join(" / ")}</small>
+    </a>
   );
 }
 
@@ -290,6 +442,8 @@ function Header() {
   const adminRoute = isAdminRoute();
   const path = stripAdminPath();
   const topLine = content.site.topLine.replace(/^ACT IV\s*/i, "");
+  const logoAttachment = normalizeAttachment(content.site.logo);
+  const logoSrc = logoAttachment && hasMedia(logoAttachment) && isImageAttachment(logoAttachment) ? logoAttachment.url : "/logo2.png";
 
   return (
     <header className="header">
@@ -298,7 +452,7 @@ function Header() {
       </div>
       <div className="container head-wrap">
         <a href={adminRoute ? "/admin" : "/"} className="logo" aria-label="ACT IV home">
-          <img src={content.site.logo || "/logo2.png"} alt="ACT IV Future Visual Lab" />
+          <img src={logoSrc} alt="ACT IV Future Visual Lab" />
         </a>
         <nav className="nav" aria-label="Primary navigation">
           {navItems.map((item) => (
@@ -482,9 +636,9 @@ function HomePage() {
                       {hasText(item.date) ? <span className="date">{item.date}</span> : null}
                     </div>
                   ) : null}
-                  {hasText(item.image) ? (
+                  {hasMedia(item.image) ? (
                     <span className="thumb">
-                      <img src={item.image} alt="" />
+                      <AttachmentPreview value={item.image} />
                     </span>
                   ) : editor.isEditing ? (
                     <span className="thumb admin-media-shell">
@@ -610,9 +764,9 @@ function PeoplePage() {
   const renderPersonCard = (person, isEmpty) => (
     <>
       {isEmpty ? <EmptyEntryPlaceholder label="空 People 条目" /> : null}
-      {!isEmpty && person.photo ? (
+      {!isEmpty && hasMedia(person.photo) ? (
         <figure>
-          <img src={person.photo} alt="" />
+          <AttachmentPreview value={person.photo} />
         </figure>
       ) : !isEmpty && editor.isEditing ? (
         <figure className="admin-media-shell">
@@ -684,9 +838,9 @@ function PeopleModal({ person, onClose }) {
             <X size={24} />
           </button>
         </header>
-        {hasText(person.photo) ? (
+        {hasMedia(person.photo) ? (
           <figure className="people-modal-photo">
-            <img src={person.photo} alt="" />
+            <AttachmentPreview value={person.photo} />
           </figure>
         ) : null}
         {fields.length ? (
@@ -739,9 +893,9 @@ function WorksPage() {
   const renderWorkRow = (item, isEmpty) => (
     <>
       {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : null}
-      {!isEmpty && hasText(item.image) ? (
+      {!isEmpty && hasMedia(item.image) ? (
         <figure>
-          <img src={item.image} alt="" />
+          <AttachmentPreview value={item.image} />
         </figure>
       ) : !isEmpty && editor.isEditing ? (
         <figure className="admin-media-shell">
@@ -920,9 +1074,9 @@ function DetailArticle({ image, fields, className = "detail-page reveal-section"
   const visibleFields = fields.filter(([, value]) => hasText(value));
   return (
     <AdminEditable as="article" className={className} {...editableProps}>
-      {image ? (
+      {hasMedia(image) ? (
         <figure className="detail-hero reveal-item">
-          <img src={image} alt="" />
+          <AttachmentPreview value={image} />
         </figure>
       ) : showEmptyPlaceholders ? (
         <figure className="detail-hero reveal-item admin-media-shell">
@@ -1003,9 +1157,9 @@ function TextInput({ label, value, onChange, multiline = false, type = "text", r
 function UploadBox({ onUpload }) {
   return (
     <label className="upload-box">
-      <ImagePlus size={18} />
-      <span>上传图片</span>
-      <input type="file" accept="image/*" onChange={(event) => onUpload(event.target.files?.[0])} />
+      <Paperclip size={18} />
+      <span>上传附件</span>
+      <input type="file" onChange={(event) => onUpload(event.target.files?.[0])} />
     </label>
   );
 }
@@ -1100,15 +1254,15 @@ function AdminSessionProvider({ children }) {
     async (callback, file) => {
       if (!file) return;
       const body = new FormData();
-      body.append("image", file);
+      body.append("file", file);
       const response = await fetch("/api/upload", { method: "POST", body }).catch(() => null);
       if (!response?.ok) {
-        showMessage("图片上传失败，请确认文件格式。");
+        showMessage("附件上传失败，请检查文件大小或登录状态。");
         return;
       }
       const data = await response.json();
-      callback(data.url);
-      showMessage("图片已上传，保存后生效。");
+      callback(data.attachment || data);
+      showMessage("附件已上传，保存后生效。");
     },
     [showMessage],
   );
@@ -1229,7 +1383,7 @@ function useScopedContentEditor() {
       },
       fields: [
         { name: "topLine", label: "顶部文案" },
-        { name: "logo", label: "Logo 图片", type: "image" },
+        { name: "logo", label: "Logo 附件", type: "image" },
         { name: "contactAddress", label: "地址", type: "textarea" },
         { name: "contactEmail", label: "邮箱" },
         { name: "contactDirections", label: "方向", type: "textarea" },
@@ -1357,7 +1511,7 @@ function useScopedContentEditor() {
     );
 
   const peopleFields = [
-    { name: "photo", label: "照片", type: "image" },
+    { name: "photo", label: "附件", type: "image" },
     { name: "name", label: "姓名" },
     { name: "email", label: "邮箱" },
     { name: "interests", label: "研究方向", type: "textarea" },
@@ -1401,7 +1555,7 @@ function useScopedContentEditor() {
     );
 
   const workFields = [
-    { name: "image", label: "图片", type: "image" },
+    { name: "image", label: "附件", type: "image" },
     { name: "title", label: "标题" },
     { name: "date", label: "时间" },
     { name: "people", label: "人员" },
@@ -1445,7 +1599,7 @@ function useScopedContentEditor() {
     );
 
   const boardFields = [
-    { name: "image", label: "图片", type: "image" },
+    { name: "image", label: "附件", type: "image" },
     { name: "title", label: "标题" },
     { name: "date", label: "时间" },
     { name: "people", label: "人员 / 作者" },
@@ -1611,15 +1765,15 @@ function AdminPage() {
   const uploadImage = async (callback, file) => {
     if (!file) return;
     const body = new FormData();
-    body.append("image", file);
+    body.append("file", file);
     const response = await fetch("/api/upload", { method: "POST", body });
     if (!response.ok) {
-      setMessage("上传失败，请确认文件格式为图片。");
+      setMessage("上传失败，请检查文件大小或登录状态。");
       return;
     }
     const data = await response.json();
-    callback(data.url);
-    setMessage("图片已上传，点击保存后前台生效。");
+    callback(data.attachment || data);
+    setMessage("附件已上传，点击保存后前台生效。");
   };
 
   const updateWork = (index, key, value) => {
@@ -1718,7 +1872,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
       },
       fields: [
         { name: "topLine", label: "顶部细条文案" },
-        { name: "logo", label: "Logo 图片地址", type: "image" },
+        { name: "logo", label: "Logo 附件地址", type: "image" },
         { name: "contactAddress", label: "地址", type: "textarea" },
         { name: "contactEmail", label: "邮箱" },
         { name: "contactDirections", label: "方向", type: "textarea" },
@@ -1807,7 +1961,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
   };
 
   const peopleFields = [
-    { name: "photo", label: "照片", type: "image" },
+    { name: "photo", label: "附件", type: "image" },
     { name: "name", label: "姓名" },
     { name: "email", label: "邮箱" },
     { name: "interests", label: "兴趣方向", type: "textarea" },
@@ -1815,7 +1969,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
     { name: "experience", label: "经验", type: "textarea" },
   ];
   const workFields = [
-    { name: "image", label: "图片", type: "image" },
+    { name: "image", label: "附件", type: "image" },
     { name: "title", label: "标题" },
     { name: "date", label: "时间" },
     { name: "people", label: "人员" },
@@ -1823,7 +1977,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
     { name: "body", label: "正文", type: "textarea", rows: 8 },
   ];
   const boardFields = [
-    { name: "image", label: "图片", type: "image" },
+    { name: "image", label: "附件", type: "image" },
     { name: "title", label: "标题" },
     { name: "date", label: "时间" },
     { name: "people", label: "人员 / 作者" },
@@ -1951,10 +2105,10 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const indexedPeople = (draft.people || [])
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["photo", "name", "interests", "email", "history", "experience"]));
+    .filter(({ item }) => hasAnyValue(item, PEOPLE_CONTENT_FIELDS));
   const indexedWorks = (draft.works || [])
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => hasAnyText(item, ["image", "title", "date", "text", "people", "body"]));
+    .filter(({ item }) => hasAnyValue(item, WORK_CONTENT_FIELDS));
   const contactFields = [
     ["地址", site.contactAddress],
     ["邮箱", site.contactEmail],
@@ -2045,9 +2199,9 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
               {indexedPeople.map(({ item, index }) => (
                 <article className="people-card admin-editable" key={item.id || index}>
                   <AdminInlineControls onEdit={() => openPersonEditor(item, index)} onAdd={() => openPersonEditor()} onDelete={() => removePerson(index)} />
-                  {hasText(item.photo) ? (
+                  {hasMedia(item.photo) ? (
                     <figure>
-                      <img src={item.photo} alt="" />
+                      <AttachmentPreview value={item.photo} />
                     </figure>
                   ) : null}
                   {hasText(item.name) ? <h2>{item.name}</h2> : null}
@@ -2072,9 +2226,9 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
               {indexedWorks.map(({ item, index }) => (
                 <article className="work-row reveal-item admin-editable" key={item.id || index}>
                   <AdminInlineControls onEdit={() => openWorkEditor(item, index)} onAdd={() => openWorkEditor()} onDelete={() => removeWork(index)} />
-                  {hasText(item.image) ? (
+                  {hasMedia(item.image) ? (
                     <figure>
-                      <img src={item.image} alt="" />
+                      <AttachmentPreview value={item.image} />
                     </figure>
                   ) : null}
                   {hasText(item.date) || hasText(item.title) || hasText(item.text) ? (
@@ -2100,7 +2254,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
               const listKey = meta.dataKey;
               const indexedItems = (draft.board?.[listKey] || [])
                 .map((item, index) => ({ item, index }))
-                .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "body", "people", "image"]));
+                .filter(({ item }) => hasAnyValue(item, BOARD_CONTENT_FIELDS));
               return (
                 <div className="board-page admin-board-preview" key={sectionKey}>
                   <div className="main-title">
@@ -2219,15 +2373,15 @@ function AdminEditModal({ modal, onClose, uploadImage }) {
             field.type === "image" ? (
               <div className="admin-image-editor" key={field.name}>
                 <span className="admin-field-title">{field.label}</span>
-                {hasText(formData[field.name]) ? (
-                  <img src={formData[field.name]} alt="" />
+                {hasMedia(formData[field.name]) ? (
+                  <AttachmentPreview value={formData[field.name]} />
                 ) : (
-                  <div className="admin-empty-image">未上传图片</div>
+                  <div className="admin-empty-image">未上传附件</div>
                 )}
-                <TextInput label={`${field.label}地址`} value={formData[field.name]} onChange={(value) => updateField(field.name, value)} />
+                <TextInput label={`${field.label}地址`} value={attachmentUrl(formData[field.name])} onChange={(value) => updateField(field.name, value)} />
                 <div className="admin-row-actions">
                   <UploadBox onUpload={(file) => uploadImage((url) => updateField(field.name, url), file)} />
-                  {hasText(formData[field.name]) ? <button type="button" className="admin-muted-button" onClick={() => updateField(field.name, "")}>移除图片</button> : null}
+                  {hasMedia(formData[field.name]) ? <button type="button" className="admin-muted-button" onClick={() => updateField(field.name, "")}>删除当前附件</button> : null}
                 </div>
               </div>
             ) : (
@@ -2266,14 +2420,14 @@ function BoardEditor({ draft, addBoardItem, removeBoardItem, updateBoardItem, up
             <div className="admin-work-list">
               {(draft.board?.[key] || []).map((item, index) => (
                 <article className="admin-work-card" key={item.id || index}>
-                  <figure>{item.image ? <img src={item.image} alt="" /> : null}</figure>
+                  <figure>{hasMedia(item.image) ? <AttachmentPreview value={item.image} /> : null}</figure>
                   <div className="admin-work-form">
                     <TextInput label="标题" value={item.title} onChange={(value) => updateBoardItem(key, index, "title", value)} />
                     <TextInput label="时间" value={item.date} onChange={(value) => updateBoardItem(key, index, "date", value)} />
                     <TextInput label="人员 / 作者" value={item.people} onChange={(value) => updateBoardItem(key, index, "people", value)} />
                     <TextInput label="介绍" value={item.intro} multiline onChange={(value) => updateBoardItem(key, index, "intro", value)} />
                     <TextInput label="正文" value={item.body} multiline onChange={(value) => updateBoardItem(key, index, "body", value)} />
-                    <TextInput label="图片地址" value={item.image} onChange={(value) => updateBoardItem(key, index, "image", value)} />
+                    <TextInput label="附件地址" value={attachmentUrl(item.image)} onChange={(value) => updateBoardItem(key, index, "image", value)} />
                     <div className="admin-row-actions">
                       <UploadBox onUpload={(file) => uploadImage((url) => updateBoardItem(key, index, "image", url), file)} />
                       <button type="button" className="admin-danger" onClick={() => removeBoardItem(key, index)}><Trash2 size={16} />删除</button>
@@ -2299,14 +2453,14 @@ function PeopleEditor({ draft, updatePerson, removePerson, addPerson, uploadImag
       <div className="admin-work-list">
         {draft.people.map((person, index) => (
           <article className="admin-work-card" key={person.id || index}>
-            <figure>{person.photo ? <img src={person.photo} alt="" /> : null}</figure>
+            <figure>{hasMedia(person.photo) ? <AttachmentPreview value={person.photo} /> : null}</figure>
             <div className="admin-work-form">
               <TextInput label="姓名" value={person.name} onChange={(value) => updatePerson(index, "name", value)} />
               <TextInput label="邮箱" value={person.email} onChange={(value) => updatePerson(index, "email", value)} />
               <TextInput label="兴趣方向" value={person.interests} multiline onChange={(value) => updatePerson(index, "interests", value)} />
               <TextInput label="经历" value={person.history} multiline onChange={(value) => updatePerson(index, "history", value)} />
               <TextInput label="经验" value={person.experience} multiline onChange={(value) => updatePerson(index, "experience", value)} />
-              <TextInput label="照片地址" value={person.photo} onChange={(value) => updatePerson(index, "photo", value)} />
+              <TextInput label="附件地址" value={attachmentUrl(person.photo)} onChange={(value) => updatePerson(index, "photo", value)} />
               <div className="admin-row-actions">
                 <UploadBox onUpload={(file) => uploadImage((url) => updatePerson(index, "photo", url), file)} />
                 <button type="button" className="admin-danger" onClick={() => removePerson(index)}><Trash2 size={16} />删除</button>
@@ -2329,14 +2483,14 @@ function WorksEditor({ draft, updateWork, removeWork, addWork, uploadImage }) {
       <div className="admin-work-list">
         {draft.works.map((work, index) => (
           <article className="admin-work-card" key={work.id || index}>
-            <figure>{work.image ? <img src={work.image} alt="" /> : null}</figure>
+            <figure>{hasMedia(work.image) ? <AttachmentPreview value={work.image} /> : null}</figure>
             <div className="admin-work-form">
               <TextInput label="标题" value={work.title} onChange={(value) => updateWork(index, "title", value)} />
               <TextInput label="时间" value={work.date} onChange={(value) => updateWork(index, "date", value)} />
               <TextInput label="人员" value={work.people} onChange={(value) => updateWork(index, "people", value)} />
               <TextInput label="介绍" value={work.text} multiline onChange={(value) => updateWork(index, "text", value)} />
               <TextInput label="正文" value={work.body} multiline onChange={(value) => updateWork(index, "body", value)} />
-              <TextInput label="照片地址" value={work.image} onChange={(value) => updateWork(index, "image", value)} />
+              <TextInput label="附件地址" value={attachmentUrl(work.image)} onChange={(value) => updateWork(index, "image", value)} />
               <div className="admin-row-actions">
                 <UploadBox onUpload={(file) => uploadImage((url) => updateWork(index, "image", url), file)} />
                 <button type="button" className="admin-danger" onClick={() => removeWork(index)}><Trash2 size={16} />删除</button>
