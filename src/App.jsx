@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, ImagePlus, Loader2, LogOut, Menu, Save, X } from "lucide-react";
+import { ArrowRight, ArrowUp, ImagePlus, Loader2, LogOut, Menu, Plus, Save, Trash2, X } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
@@ -11,26 +11,43 @@ const navItems = [
   { label: "About LAB", path: "/about-lab" },
   { label: "People", path: "/people" },
   { label: "Works", path: "/works" },
-  { label: "Board", path: "/board" },
+  {
+    label: "Board",
+    path: "/board",
+    children: [
+      { label: "News", path: "/board/news" },
+      { label: "Project", path: "/board/project" },
+      { label: "Research", path: "/board/research" },
+    ],
+  },
   { label: "Contact", path: "/contact" },
 ];
 
+const boardSections = {
+  news: { title: "News", dataKey: "news", path: "/board/news" },
+  project: { title: "Project", dataKey: "projects", path: "/board/project" },
+  research: { title: "Research", dataKey: "research", path: "/board/research" },
+};
+
 const ContentContext = createContext(defaultContent);
-const ContentActionsContext = createContext({
-  refreshContent: async () => {},
-  setContentFromCms: () => {},
-});
+const ContentActionsContext = createContext({ setContentFromCms: () => {}, refreshContent: async () => {} });
 const CONTENT_UPDATED_EVENT = "act4-content-updated";
 
-function notifyContentUpdated() {
-  window.dispatchEvent(new Event(CONTENT_UPDATED_EVENT));
-  try {
-    const channel = new BroadcastChannel(CONTENT_UPDATED_EVENT);
-    channel.postMessage(Date.now());
-    channel.close();
-  } catch {
-    localStorage.setItem(CONTENT_UPDATED_EVENT, String(Date.now()));
-  }
+function makeId(value = "item") {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || `item-${Date.now()}`;
+}
+
+function normalizePath(path) {
+  return path.replace(/\/$/, "") || "/";
+}
+
+function pathParts() {
+  return normalizePath(window.location.pathname).split("/").filter(Boolean);
 }
 
 function useSiteContent() {
@@ -41,8 +58,28 @@ function useContentActions() {
   return useContext(ContentActionsContext);
 }
 
-function normalizePath(path) {
-  return path.replace(/\/$/, "") || "/";
+function getBoardItems(content, section) {
+  const key = boardSections[section]?.dataKey || section;
+  return content.board?.[key] || [];
+}
+
+function findById(items, id, labelKey = "title") {
+  return items.find((item) => item.id === id || makeId(item[labelKey]) === id);
+}
+
+function hasText(value) {
+  return String(value || "").trim().length > 0;
+}
+
+function notifyContentUpdated() {
+  window.dispatchEvent(new Event(CONTENT_UPDATED_EVENT));
+  try {
+    const channel = new BroadcastChannel(CONTENT_UPDATED_EVENT);
+    channel.postMessage(Date.now());
+    channel.close();
+  } catch {
+    localStorage.setItem(CONTENT_UPDATED_EVENT, String(Date.now()));
+  }
 }
 
 function PlusMark({ className = "" }) {
@@ -59,7 +96,6 @@ function WebGLVisual() {
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
-
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     camera.position.z = 5.7;
@@ -69,19 +105,8 @@ function WebGLVisual() {
 
     const group = new THREE.Group();
     scene.add(group);
-
-    const coreMaterial = new THREE.MeshBasicMaterial({
-      color: 0xf4f4f4,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.28,
-    });
-    const shellMaterial = new THREE.MeshBasicMaterial({
-      color: 0xb8b8b8,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.14,
-    });
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xf4f4f4, wireframe: true, transparent: true, opacity: 0.28 });
+    const shellMaterial = new THREE.MeshBasicMaterial({ color: 0xb8b8b8, wireframe: true, transparent: true, opacity: 0.14 });
     const core = new THREE.Mesh(new THREE.TorusKnotGeometry(1.15, 0.28, 220, 24), coreMaterial);
     const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(2.05, 3), shellMaterial);
     group.add(core, shell);
@@ -98,15 +123,7 @@ function WebGLVisual() {
     }
     const pointGeometry = new THREE.BufferGeometry();
     pointGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    const points = new THREE.Points(
-      pointGeometry,
-      new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.012,
-        transparent: true,
-        opacity: 0.32,
-      }),
-    );
+    const points = new THREE.Points(pointGeometry, new THREE.PointsMaterial({ color: 0xffffff, size: 0.012, transparent: true, opacity: 0.32 }));
     scene.add(points);
 
     const resize = () => {
@@ -165,7 +182,7 @@ function Header() {
         </a>
         <nav className="nav" aria-label="Primary navigation">
           {navItems.map((item) => (
-            <a className={path === item.path ? "active" : ""} key={item.label} href={item.path}>
+            <a className={path === item.path || path.startsWith(`${item.path}/`) ? "active" : ""} key={item.label} href={item.path}>
               {item.label}
             </a>
           ))}
@@ -184,10 +201,21 @@ function Header() {
             <X size={28} />
           </button>
           {navItems.map((item, index) => (
-            <a key={item.label} href={item.path}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              {item.label}
-            </a>
+            <div className="mobile-panel-item" key={item.label}>
+              <a className="mobile-panel-main" href={item.path}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                {item.label}
+              </a>
+              {item.children ? (
+                <div className="mobile-panel-sub">
+                  {item.children.map((child) => (
+                    <a key={child.label} href={child.path}>
+                      {child.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ))}
         </div>
       ) : null}
@@ -216,20 +244,28 @@ function useReveal() {
         duration: 0.72,
         ease: "power3.out",
         stagger: 0.16,
-        scrollTrigger: {
-          trigger: section,
-          start: "top 78%",
-        },
+        scrollTrigger: { trigger: section, start: "top 78%" },
       });
     });
     return () => ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
   }, []);
 }
 
+function PageShell({ title, children }) {
+  useReveal();
+  return (
+    <main id="site-content" className="sub-page" role="main">
+      <div className="container cont-wrap">
+        <h1 className="sub-title">{title}</h1>
+        {children}
+      </div>
+    </main>
+  );
+}
+
 function HomePage() {
   const content = useSiteContent();
   useReveal();
-
   return (
     <main id="top" className="main">
       <h1 className="sub-title main-title-hidden">main</h1>
@@ -265,13 +301,13 @@ function HomePage() {
 
       <div className="mb-latest container">
         <section className="news reveal-section">
-          <MainTitle href="/board">News</MainTitle>
+          <MainTitle href="/board/news">News</MainTitle>
           <ul className="news-list">
-            {content.news.map((item) => (
-              <li className="reveal-item" key={item.title}>
-                <a href="/board">
+            {(content.board?.news || []).map((item) => (
+              <li className="reveal-item" key={item.id || item.title}>
+                <a href={`/board/news/${item.id || makeId(item.title)}`}>
                   <span className="subj">{item.title}</span>
-                  <span className="cont">{item.text}</span>
+                  <span className="cont">{item.intro || item.body}</span>
                   <span className="date">{item.date}</span>
                 </a>
               </li>
@@ -283,8 +319,8 @@ function HomePage() {
           <MainTitle href="/works">Works</MainTitle>
           <ul className="exhibition-list">
             {content.works.map((item) => (
-              <li className="reveal-item" key={item.title}>
-                <a href="/works">
+              <li className="reveal-item" key={item.id || item.title}>
+                <a href={`/works/${item.id || makeId(item.title)}`}>
                   <div className="item">
                     <span className="subj">{item.title}</span>
                     <span className="date">{item.date}</span>
@@ -302,44 +338,17 @@ function HomePage() {
         </section>
 
         <section className="project reveal-section">
-          <MainTitle href="/people">Project</MainTitle>
+          <MainTitle href="/board/project">Project</MainTitle>
           <ul className="project-list">
-            {content.projects.map((item) => (
-              <li className="reveal-item" key={item}>
-                <a href="/people">
-                  <span className="subj">{item}</span>
+            {(content.board?.projects || []).map((item) => (
+              <li className="reveal-item" key={item.id || item.title}>
+                <a href={`/board/project/${item.id || makeId(item.title)}`}>
+                  <span className="subj">{item.title}</span>
                 </a>
               </li>
             ))}
           </ul>
         </section>
-
-        <section className="dissertation reveal-section">
-          <MainTitle href="/about-lab">Archive</MainTitle>
-          <ul className="archive-list">
-            {content.archive.map(([title, text]) => (
-              <li className="reveal-item" key={title}>
-                <a href="/about-lab">
-                  <span>{title}</span>
-                  <span>{text}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-function PageShell({ title, children }) {
-  useReveal();
-
-  return (
-    <main id="site-content" className="sub-page" role="main">
-      <div className="container cont-wrap">
-        <h1 className="sub-title">{title}</h1>
-        {children}
       </div>
     </main>
   );
@@ -347,7 +356,6 @@ function PageShell({ title, children }) {
 
 function AboutPage() {
   const content = useSiteContent();
-
   return (
     <PageShell title="About LAB">
       <div className="about-lab">
@@ -390,18 +398,23 @@ function AboutPage() {
 
 function PeoplePage() {
   const content = useSiteContent();
-
   return (
     <PageShell title="People">
       <div className="people-page reveal-section">
-        <span className="professor-label reveal-item">研究方向</span>
+        <span className="professor-label reveal-item">PEOPLE</span>
         <div className="people-grid-page">
-          {content.people.map(([title, text], index) => (
-            <article className="people-card reveal-item" key={title}>
+          {content.people.map((person, index) => (
+            <a className="people-card reveal-item" href={`/people/${person.id || makeId(person.name)}`} key={person.id || person.name}>
+              {person.photo ? (
+                <figure>
+                  <img src={person.photo} alt="" />
+                </figure>
+              ) : null}
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <h2>{title}</h2>
-              <p>{text}</p>
-            </article>
+              <h2>{person.name}</h2>
+              {person.interests ? <h3>{person.interests}</h3> : null}
+              {person.history ? <p>{person.history}</p> : null}
+            </a>
           ))}
         </div>
       </div>
@@ -409,14 +422,45 @@ function PeoplePage() {
   );
 }
 
+function PeopleDetailPage({ id }) {
+  const content = useSiteContent();
+  const person = findById(content.people || [], id, "name");
+  if (!person) return <NotFoundPage />;
+  return (
+    <PageShell title={person.name || "People"}>
+      <article className="detail-page people-detail reveal-section">
+        {person.photo ? (
+          <figure className="detail-hero reveal-item">
+            <img src={person.photo} alt="" />
+          </figure>
+        ) : null}
+        <div className="detail-fields">
+          {[
+            ["Email", person.email],
+            ["兴趣方向", person.interests],
+            ["经历", person.history],
+            ["经验", person.experience],
+          ]
+            .filter(([, value]) => hasText(value))
+            .map(([label, value]) => (
+              <section className="detail-field reveal-item" key={label}>
+                <span>{label}</span>
+                <p>{value}</p>
+              </section>
+            ))}
+        </div>
+      </article>
+    </PageShell>
+  );
+}
+
 function WorksPage() {
   const content = useSiteContent();
-
   return (
     <PageShell title="Works">
       <div className="works-page reveal-section">
         {content.works.map((item) => (
-          <article className="work-row reveal-item" key={item.title}>
+          <a className="work-row reveal-item" href={`/works/${item.id || makeId(item.title)}`} key={item.id || item.title}>
             <figure>
               <img src={item.image} alt="" />
             </figure>
@@ -425,29 +469,6 @@ function WorksPage() {
               <h2>{item.title}</h2>
               <p>{item.text}</p>
             </div>
-          </article>
-        ))}
-      </div>
-    </PageShell>
-  );
-}
-
-function BoardPage() {
-  const content = useSiteContent();
-
-  return (
-    <PageShell title="Board">
-      <div className="board-page reveal-section">
-        <div className="board-head reveal-item">
-          <span>日期</span>
-          <span>标题</span>
-          <span>内容</span>
-        </div>
-        {content.boardRows.map(([date, title, text]) => (
-          <a className="board-row reveal-item" href="/contact" key={title}>
-            <span>{date}</span>
-            <strong>{title}</strong>
-            <p>{text}</p>
           </a>
         ))}
       </div>
@@ -455,9 +476,104 @@ function BoardPage() {
   );
 }
 
+function WorksDetailPage({ id }) {
+  const content = useSiteContent();
+  const work = findById(content.works || [], id);
+  if (!work) return <NotFoundPage />;
+  return (
+    <PageShell title={work.title || "Works"}>
+      <DetailArticle image={work.image} fields={[
+        ["时间", work.date],
+        ["人员", work.people],
+        ["介绍", work.text],
+        ["正文", work.body],
+      ]} />
+    </PageShell>
+  );
+}
+
+function BoardPage() {
+  const content = useSiteContent();
+  return (
+    <PageShell title="Board">
+      <div className="board-hub reveal-section">
+        {Object.entries(boardSections).map(([key, section], index) => (
+          <a className="board-hub-card reveal-item" href={section.path} key={key}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{section.title}</strong>
+            <p>{getBoardItems(content, key).length} ITEMS</p>
+          </a>
+        ))}
+      </div>
+    </PageShell>
+  );
+}
+
+function BoardListPage({ section }) {
+  const content = useSiteContent();
+  const meta = boardSections[section];
+  if (!meta) return <NotFoundPage />;
+  return (
+    <PageShell title={meta.title}>
+      <div className="board-page reveal-section">
+        <div className="board-head reveal-item">
+          <span>DATE</span>
+          <span>TITLE</span>
+          <span>INTRO</span>
+        </div>
+        {getBoardItems(content, section).map((item) => (
+          <a className="board-row reveal-item" href={`${meta.path}/${item.id || makeId(item.title)}`} key={item.id || item.title}>
+            <span>{item.date}</span>
+            <strong>{item.title}</strong>
+            <p>{item.intro || item.body}</p>
+          </a>
+        ))}
+      </div>
+    </PageShell>
+  );
+}
+
+function BoardDetailPage({ section, id }) {
+  const content = useSiteContent();
+  const meta = boardSections[section];
+  const item = findById(getBoardItems(content, section), id);
+  if (!meta || !item) return <NotFoundPage />;
+  return (
+    <PageShell title={item.title || meta.title}>
+      <DetailArticle image={item.image} fields={[
+        ["时间", item.date],
+        ["人员", item.people],
+        ["介绍", item.intro],
+        ["正文", item.body],
+      ]} />
+    </PageShell>
+  );
+}
+
+function DetailArticle({ image, fields }) {
+  return (
+    <article className="detail-page reveal-section">
+      {image ? (
+        <figure className="detail-hero reveal-item">
+          <img src={image} alt="" />
+        </figure>
+      ) : null}
+      <div className="detail-fields">
+        {fields
+          .filter(([, value]) => hasText(value))
+          .map(([label, value]) => (
+            <section className="detail-field reveal-item" key={label}>
+              <span>{label}</span>
+              <p>{value}</p>
+            </section>
+          ))}
+      </div>
+    </article>
+  );
+}
+
 function ContactPage() {
   const content = useSiteContent();
-
   return (
     <PageShell title="Contact">
       <div className="contact-container reveal-section">
@@ -504,45 +620,13 @@ function TextInput({ label, value, onChange, multiline = false, type = "text" })
   );
 }
 
-function updateListValue(list, index, value) {
-  return list.map((item, itemIndex) => (itemIndex === index ? value : item));
-}
-
-function updateTupleValue(list, rowIndex, columnIndex, value) {
-  return list.map((row, itemIndex) =>
-    itemIndex === rowIndex ? row.map((cell, cellIndex) => (cellIndex === columnIndex ? value : cell)) : row,
-  );
-}
-
-function SimpleListEditor({ title, items, labels, onChange }) {
+function UploadBox({ onUpload }) {
   return (
-    <section className="admin-panel">
-      <h2>{title}</h2>
-      <div className="admin-grid">
-        {items.map((item, index) => (
-          <div className="admin-mini-card" key={`${title}-${index}`}>
-            {Array.isArray(item) ? (
-              item.map((cell, columnIndex) => (
-                <TextInput
-                  key={`${title}-${index}-${columnIndex}`}
-                  label={labels[columnIndex] || `内容 ${columnIndex + 1}`}
-                  value={cell}
-                  multiline={columnIndex > 0}
-                  onChange={(value) => onChange(updateTupleValue(items, index, columnIndex, value))}
-                />
-              ))
-            ) : (
-              <TextInput
-                label={labels[0] || "内容"}
-                value={item}
-                multiline
-                onChange={(value) => onChange(updateListValue(items, index, value))}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
+    <label className="upload-box">
+      <ImagePlus size={18} />
+      <span>上传图片</span>
+      <input type="file" accept="image/*" onChange={(event) => onUpload(event.target.files?.[0])} />
+    </label>
   );
 }
 
@@ -574,6 +658,25 @@ function AdminPage() {
       .catch(() => setDraft(publicContent));
   }, [loggedIn, publicContent]);
 
+  const save = async () => {
+    setSaving(true);
+    setMessage("");
+    const response = await fetch("/api/content", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draft),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      const savedContent = data.content || draft;
+      setDraft(savedContent);
+      setContentFromCms(savedContent);
+      notifyContentUpdated();
+    }
+    setSaving(false);
+    setMessage(response.ok ? "已保存，前台已同步更新。" : "保存失败，请检查服务器。");
+  };
+
   const login = async (event) => {
     event.preventDefault();
     setMessage("");
@@ -595,52 +698,7 @@ function AdminPage() {
     setLoggedIn(false);
   };
 
-  const save = async () => {
-    setSaving(true);
-    setMessage("");
-    const response = await fetch("/api/content", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok) {
-      const savedContent = data.content || draft;
-      setDraft(savedContent);
-      setContentFromCms(savedContent);
-      notifyContentUpdated();
-    }
-    setSaving(false);
-    setMessage(response.ok ? "已保存，前台刷新后立即生效。" : "保存失败，请检查服务器。");
-  };
-
-  const updateWork = (index, key, value) => {
-    setDraft((current) => ({
-      ...current,
-      works: current.works.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)),
-    }));
-  };
-
-  const updateNews = (index, key, value) => {
-    setDraft((current) => ({
-      ...current,
-      news: current.news.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)),
-    }));
-  };
-
-  const updateAboutSection = (index, key, value) => {
-    setDraft((current) => ({
-      ...current,
-      about: {
-        ...current.about,
-        sections: current.about.sections.map((section, itemIndex) =>
-          itemIndex === index ? { ...section, [key]: value } : section,
-        ),
-      },
-    }));
-  };
-
-  const uploadWorkImage = async (index, file) => {
+  const uploadImage = async (callback, file) => {
     if (!file) return;
     const body = new FormData();
     body.append("image", file);
@@ -650,18 +708,57 @@ function AdminPage() {
       return;
     }
     const data = await response.json();
-    updateWork(index, "image", data.url);
+    callback(data.url);
     setMessage("图片已上传，点击保存后前台生效。");
   };
 
-  if (!authChecked) {
-    return (
-      <main className="admin-screen">
-        <Loader2 className="spin" />
-      </main>
-    );
-  }
+  const updateWork = (index, key, value) => {
+    setDraft((current) => ({
+      ...current,
+      works: current.works.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value, id: key === "title" ? makeId(value) : item.id } : item,
+      ),
+    }));
+  };
 
+  const updatePerson = (index, key, value) => {
+    setDraft((current) => ({
+      ...current,
+      people: current.people.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value, id: key === "name" ? makeId(value) : item.id } : item,
+      ),
+    }));
+  };
+
+  const updateBoardItem = (sectionKey, index, key, value) => {
+    setDraft((current) => ({
+      ...current,
+      board: {
+        ...current.board,
+        [sectionKey]: current.board[sectionKey].map((item, itemIndex) =>
+          itemIndex === index ? { ...item, [key]: value, id: key === "title" ? makeId(value) : item.id } : item,
+        ),
+      },
+    }));
+  };
+
+  const addListItem = (key, item) => setDraft((current) => ({ ...current, [key]: [...current[key], item] }));
+  const removeListItem = (key, index) => setDraft((current) => ({ ...current, [key]: current[key].filter((_, itemIndex) => itemIndex !== index) }));
+  const addBoardItem = (sectionKey) =>
+    setDraft((current) => ({
+      ...current,
+      board: {
+        ...current.board,
+        [sectionKey]: [...current.board[sectionKey], { id: `item-${Date.now()}`, title: "新条目", date: "", intro: "", people: "", image: "", body: "" }],
+      },
+    }));
+  const removeBoardItem = (sectionKey, index) =>
+    setDraft((current) => ({
+      ...current,
+      board: { ...current.board, [sectionKey]: current.board[sectionKey].filter((_, itemIndex) => itemIndex !== index) },
+    }));
+
+  if (!authChecked) return <main className="admin-screen"><Loader2 className="spin" /></main>;
   if (!loggedIn) {
     return (
       <main className="admin-screen admin-login">
@@ -669,12 +766,7 @@ function AdminPage() {
           <span className="admin-kicker">ACT IV ADMIN</span>
           <h1>后台登录</h1>
           <TextInput label="用户名" value={form.username} onChange={(value) => setForm({ ...form, username: value })} />
-          <TextInput
-            label="密码"
-            value={form.password}
-            type="password"
-            onChange={(value) => setForm({ ...form, password: value })}
-          />
+          <TextInput label="密码" value={form.password} type="password" onChange={(value) => setForm({ ...form, password: value })} />
           <button type="submit">登录</button>
           {message ? <p className="admin-message">{message}</p> : null}
         </form>
@@ -691,48 +783,19 @@ function AdminPage() {
             <h1>网站后台管理</h1>
           </div>
           <div className="admin-actions">
-            <button type="button" onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}
-              保存
-            </button>
-            <button type="button" onClick={logout}>
-              <LogOut size={18} />
-              退出
-            </button>
+            <button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}保存</button>
+            <button type="button" onClick={logout}><LogOut size={18} />退出</button>
           </div>
         </div>
 
         <section className="admin-panel">
           <h2>基础信息</h2>
           <div className="admin-grid">
-            <TextInput
-              label="顶部细条文案"
-              value={draft.site.topLine}
-              onChange={(value) => setDraft({ ...draft, site: { ...draft.site, topLine: value } })}
-            />
-            <TextInput
-              label="联系邮箱"
-              value={draft.site.contactEmail}
-              onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactEmail: value } })}
-            />
-            <TextInput
-              label="联系地址"
-              value={draft.site.contactAddress}
-              multiline
-              onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactAddress: value } })}
-            />
-            <TextInput
-              label="联系方向"
-              value={draft.site.contactDirections}
-              multiline
-              onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactDirections: value } })}
-            />
-            <TextInput
-              label="页脚说明"
-              value={draft.site.footerTagline}
-              multiline
-              onChange={(value) => setDraft({ ...draft, site: { ...draft.site, footerTagline: value } })}
-            />
+            <TextInput label="顶部细条文案" value={draft.site.topLine} onChange={(value) => setDraft({ ...draft, site: { ...draft.site, topLine: value } })} />
+            <TextInput label="联系邮箱" value={draft.site.contactEmail} onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactEmail: value } })} />
+            <TextInput label="联系地址" value={draft.site.contactAddress} multiline onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactAddress: value } })} />
+            <TextInput label="联系方向" value={draft.site.contactDirections} multiline onChange={(value) => setDraft({ ...draft, site: { ...draft.site, contactDirections: value } })} />
+            <TextInput label="页脚说明" value={draft.site.footerTagline} multiline onChange={(value) => setDraft({ ...draft, site: { ...draft.site, footerTagline: value } })} />
           </div>
         </section>
 
@@ -740,113 +803,14 @@ function AdminPage() {
           <h2>首页介绍</h2>
           <div className="admin-grid">
             {draft.homeIntro.map((paragraph, index) => (
-              <TextInput
-                key={`home-intro-${index}`}
-                label={`段落 ${index + 1}`}
-                value={paragraph}
-                multiline
-                onChange={(value) => setDraft({ ...draft, homeIntro: updateListValue(draft.homeIntro, index, value) })}
-              />
+              <TextInput key={index} label={`段落 ${index + 1}`} value={paragraph} multiline onChange={(value) => setDraft({ ...draft, homeIntro: draft.homeIntro.map((item, itemIndex) => itemIndex === index ? value : item) })} />
             ))}
           </div>
         </section>
 
-        <section className="admin-panel">
-          <h2>About LAB 页面</h2>
-          <div className="admin-grid">
-            <TextInput
-              label="介绍标签"
-              value={draft.about.label}
-              onChange={(value) => setDraft({ ...draft, about: { ...draft.about, label: value } })}
-            />
-            <TextInput
-              label="介绍标题"
-              value={draft.about.title}
-              onChange={(value) => setDraft({ ...draft, about: { ...draft.about, title: value } })}
-            />
-          </div>
-          <div className="admin-work-list">
-            {draft.about.sections.map((section, index) => (
-              <article className="admin-mini-card" key={section.number}>
-                <TextInput label="编号" value={section.number} onChange={(value) => updateAboutSection(index, "number", value)} />
-                <TextInput label="标题" value={section.title} onChange={(value) => updateAboutSection(index, "title", value)} />
-                {section.paragraphs.map((paragraph, paragraphIndex) => (
-                  <TextInput
-                    key={`${section.number}-${paragraphIndex}`}
-                    label={`段落 ${paragraphIndex + 1}`}
-                    value={paragraph}
-                    multiline
-                    onChange={(value) =>
-                      updateAboutSection(index, "paragraphs", updateListValue(section.paragraphs, paragraphIndex, value))
-                    }
-                  />
-                ))}
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="admin-panel">
-          <h2>新闻卡片</h2>
-          <div className="admin-grid">
-            {draft.news.map((item, index) => (
-              <div className="admin-mini-card" key={`${item.title}-${index}`}>
-                <TextInput label="标题" value={item.title} onChange={(value) => updateNews(index, "title", value)} />
-                <TextInput label="日期 / 标签" value={item.date} onChange={(value) => updateNews(index, "date", value)} />
-                <TextInput label="内容" value={item.text} multiline onChange={(value) => updateNews(index, "text", value)} />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="admin-panel">
-          <h2>作品图片与内容</h2>
-          <div className="admin-work-list">
-            {draft.works.map((work, index) => (
-              <article className="admin-work-card" key={`${work.title}-${index}`}>
-                <figure>
-                  <img src={work.image} alt="" />
-                </figure>
-                <div className="admin-work-form">
-                  <TextInput label="标题" value={work.title} onChange={(value) => updateWork(index, "title", value)} />
-                  <TextInput label="编号" value={work.date} onChange={(value) => updateWork(index, "date", value)} />
-                  <TextInput label="说明" value={work.text} multiline onChange={(value) => updateWork(index, "text", value)} />
-                  <TextInput label="图片地址" value={work.image} onChange={(value) => updateWork(index, "image", value)} />
-                  <label className="upload-box">
-                    <ImagePlus size={18} />
-                    <span>上传替换图片</span>
-                    <input type="file" accept="image/*" onChange={(event) => uploadWorkImage(index, event.target.files?.[0])} />
-                  </label>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <SimpleListEditor
-          title="Project 列表"
-          items={draft.projects}
-          labels={["项目内容"]}
-          onChange={(items) => setDraft({ ...draft, projects: items })}
-        />
-        <SimpleListEditor
-          title="Archive 列表"
-          items={draft.archive}
-          labels={["标题", "内容"]}
-          onChange={(items) => setDraft({ ...draft, archive: items })}
-        />
-        <SimpleListEditor
-          title="People / 研究方向"
-          items={draft.people}
-          labels={["方向名称", "方向说明"]}
-          onChange={(items) => setDraft({ ...draft, people: items })}
-        />
-        <SimpleListEditor
-          title="Board / 公告"
-          items={draft.boardRows}
-          labels={["日期", "标题", "内容"]}
-          onChange={(items) => setDraft({ ...draft, boardRows: items })}
-        />
+        <BoardEditor draft={draft} addBoardItem={addBoardItem} removeBoardItem={removeBoardItem} updateBoardItem={updateBoardItem} uploadImage={uploadImage} />
+        <PeopleEditor draft={draft} updatePerson={updatePerson} removePerson={(index) => removeListItem("people", index)} addPerson={() => addListItem("people", { id: `person-${Date.now()}`, photo: "", name: "新成员", email: "", interests: "", history: "", experience: "" })} uploadImage={uploadImage} />
+        <WorksEditor draft={draft} updateWork={updateWork} removeWork={(index) => removeListItem("works", index)} addWork={() => addListItem("works", { id: `work-${Date.now()}`, title: "新作品", date: "", text: "", people: "", image: "", body: "" })} uploadImage={uploadImage} />
 
         {message ? <p className="admin-message sticky-message">{message}</p> : null}
       </section>
@@ -854,13 +818,116 @@ function AdminPage() {
   );
 }
 
+function BoardEditor({ draft, addBoardItem, removeBoardItem, updateBoardItem, uploadImage }) {
+  return (
+    <section className="admin-panel">
+      <h2>Board / News / Project / Research</h2>
+      {Object.entries(boardSections).map(([section, meta]) => {
+        const key = meta.dataKey;
+        return (
+          <div className="admin-section-block" key={section}>
+            <div className="admin-section-head">
+              <h3>{meta.title}</h3>
+              <button type="button" onClick={() => addBoardItem(key)}><Plus size={16} />新增</button>
+            </div>
+            <div className="admin-work-list">
+              {(draft.board?.[key] || []).map((item, index) => (
+                <article className="admin-work-card" key={item.id || index}>
+                  <figure>{item.image ? <img src={item.image} alt="" /> : null}</figure>
+                  <div className="admin-work-form">
+                    <TextInput label="标题" value={item.title} onChange={(value) => updateBoardItem(key, index, "title", value)} />
+                    <TextInput label="时间" value={item.date} onChange={(value) => updateBoardItem(key, index, "date", value)} />
+                    <TextInput label="人员 / 作者" value={item.people} onChange={(value) => updateBoardItem(key, index, "people", value)} />
+                    <TextInput label="介绍" value={item.intro} multiline onChange={(value) => updateBoardItem(key, index, "intro", value)} />
+                    <TextInput label="正文" value={item.body} multiline onChange={(value) => updateBoardItem(key, index, "body", value)} />
+                    <TextInput label="图片地址" value={item.image} onChange={(value) => updateBoardItem(key, index, "image", value)} />
+                    <div className="admin-row-actions">
+                      <UploadBox onUpload={(file) => uploadImage((url) => updateBoardItem(key, index, "image", url), file)} />
+                      <button type="button" className="admin-danger" onClick={() => removeBoardItem(key, index)}><Trash2 size={16} />删除</button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function PeopleEditor({ draft, updatePerson, removePerson, addPerson, uploadImage }) {
+  return (
+    <section className="admin-panel">
+      <div className="admin-section-head">
+        <h2>People</h2>
+        <button type="button" onClick={addPerson}><Plus size={16} />新增</button>
+      </div>
+      <div className="admin-work-list">
+        {draft.people.map((person, index) => (
+          <article className="admin-work-card" key={person.id || index}>
+            <figure>{person.photo ? <img src={person.photo} alt="" /> : null}</figure>
+            <div className="admin-work-form">
+              <TextInput label="姓名" value={person.name} onChange={(value) => updatePerson(index, "name", value)} />
+              <TextInput label="邮箱" value={person.email} onChange={(value) => updatePerson(index, "email", value)} />
+              <TextInput label="兴趣方向" value={person.interests} multiline onChange={(value) => updatePerson(index, "interests", value)} />
+              <TextInput label="经历" value={person.history} multiline onChange={(value) => updatePerson(index, "history", value)} />
+              <TextInput label="经验" value={person.experience} multiline onChange={(value) => updatePerson(index, "experience", value)} />
+              <TextInput label="照片地址" value={person.photo} onChange={(value) => updatePerson(index, "photo", value)} />
+              <div className="admin-row-actions">
+                <UploadBox onUpload={(file) => uploadImage((url) => updatePerson(index, "photo", url), file)} />
+                <button type="button" className="admin-danger" onClick={() => removePerson(index)}><Trash2 size={16} />删除</button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WorksEditor({ draft, updateWork, removeWork, addWork, uploadImage }) {
+  return (
+    <section className="admin-panel">
+      <div className="admin-section-head">
+        <h2>Works</h2>
+        <button type="button" onClick={addWork}><Plus size={16} />新增</button>
+      </div>
+      <div className="admin-work-list">
+        {draft.works.map((work, index) => (
+          <article className="admin-work-card" key={work.id || index}>
+            <figure>{work.image ? <img src={work.image} alt="" /> : null}</figure>
+            <div className="admin-work-form">
+              <TextInput label="标题" value={work.title} onChange={(value) => updateWork(index, "title", value)} />
+              <TextInput label="时间" value={work.date} onChange={(value) => updateWork(index, "date", value)} />
+              <TextInput label="人员" value={work.people} onChange={(value) => updateWork(index, "people", value)} />
+              <TextInput label="介绍" value={work.text} multiline onChange={(value) => updateWork(index, "text", value)} />
+              <TextInput label="正文" value={work.body} multiline onChange={(value) => updateWork(index, "body", value)} />
+              <TextInput label="照片地址" value={work.image} onChange={(value) => updateWork(index, "image", value)} />
+              <div className="admin-row-actions">
+                <UploadBox onUpload={(file) => uploadImage((url) => updateWork(index, "image", url), file)} />
+                <button type="button" className="admin-danger" onClick={() => removeWork(index)}><Trash2 size={16} />删除</button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function CurrentPage() {
   const path = normalizePath(window.location.pathname);
+  const parts = pathParts();
   if (path === "/") return <HomePage />;
   if (path === "/about-lab") return <AboutPage />;
   if (path === "/people") return <PeoplePage />;
+  if (parts[0] === "people" && parts[1]) return <PeopleDetailPage id={parts[1]} />;
   if (path === "/works") return <WorksPage />;
+  if (parts[0] === "works" && parts[1]) return <WorksDetailPage id={parts[1]} />;
   if (path === "/board") return <BoardPage />;
+  if (parts[0] === "board" && parts[1] && !parts[2]) return <BoardListPage section={parts[1]} />;
+  if (parts[0] === "board" && parts[1] && parts[2]) return <BoardDetailPage section={parts[1]} id={parts[2]} />;
   if (path === "/contact") return <ContactPage />;
   if (path === "/admin") return <AdminPage />;
   return <NotFoundPage />;
@@ -868,16 +935,9 @@ function CurrentPage() {
 
 function AppContentProvider({ children }) {
   const [content, setContent] = useState(defaultContent);
-
-  const setContentFromCms = useCallback((nextContent) => {
-    setContent({ ...defaultContent, ...nextContent });
-  }, []);
-
+  const setContentFromCms = useCallback((nextContent) => setContent({ ...defaultContent, ...nextContent }), []);
   const refreshContent = useCallback(async () => {
-    const response = await fetch(`/api/content?t=${Date.now()}`, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" },
-    });
+    const response = await fetch(`/api/content?t=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
     if (!response.ok) throw new Error("No dynamic content");
     const data = await response.json();
     setContentFromCms(data);
@@ -888,28 +948,19 @@ function AppContentProvider({ children }) {
     let active = true;
     const load = () => {
       refreshContent()
-        .then((data) => {
-          if (active) setContentFromCms(data);
-        })
-        .catch(() => {
-          if (active) setContent(defaultContent);
-        });
+        .then((data) => active && setContentFromCms(data))
+        .catch(() => active && setContent(defaultContent));
     };
     load();
-
     const onFocus = () => load();
     const onUpdated = () => load();
-    const onStorage = (event) => {
-      if (event.key === CONTENT_UPDATED_EVENT) load();
-    };
+    const onStorage = (event) => event.key === CONTENT_UPDATED_EVENT && load();
     const channel = "BroadcastChannel" in window ? new BroadcastChannel(CONTENT_UPDATED_EVENT) : null;
     if (channel) channel.onmessage = onUpdated;
-
     window.addEventListener("focus", onFocus);
     window.addEventListener("pageshow", onFocus);
     window.addEventListener(CONTENT_UPDATED_EVENT, onUpdated);
     window.addEventListener("storage", onStorage);
-
     return () => {
       active = false;
       window.removeEventListener("focus", onFocus);
@@ -920,12 +971,10 @@ function AppContentProvider({ children }) {
     };
   }, [refreshContent, setContentFromCms]);
 
-  const value = useMemo(() => content, [content]);
   const actions = useMemo(() => ({ refreshContent, setContentFromCms }), [refreshContent, setContentFromCms]);
-
   return (
     <ContentActionsContext.Provider value={actions}>
-      <ContentContext.Provider value={value}>{children}</ContentContext.Provider>
+      <ContentContext.Provider value={content}>{children}</ContentContext.Provider>
     </ContentActionsContext.Provider>
   );
 }
@@ -933,10 +982,7 @@ function AppContentProvider({ children }) {
 function SiteFrame() {
   const path = normalizePath(window.location.pathname);
   const content = useSiteContent();
-  const isAdmin = path === "/admin";
-
-  if (isAdmin) return <CurrentPage />;
-
+  if (path === "/admin") return <CurrentPage />;
   return (
     <>
       <Header />
@@ -945,10 +991,7 @@ function SiteFrame() {
         <div className="container">
           <p>COPYRIGHT © 2026 ACT IV FUTURE VISUAL LAB</p>
           <p>{content.site.footerTagline}</p>
-          <a href="/">
-            <ArrowUp size={18} />
-            top
-          </a>
+          <a href="/"><ArrowUp size={18} />top</a>
         </div>
       </footer>
     </>

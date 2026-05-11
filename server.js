@@ -50,7 +50,74 @@ function requireAuth(req, res, next) {
   return next();
 }
 
+function makeId(value = "item") {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || `item-${Date.now()}`;
+}
+
+function normalizeBoardItem(item, fallback = {}) {
+  const source = typeof item === "string" ? { title: item, intro: item } : item || {};
+  const title = source.title || fallback.title || "Untitled";
+  return {
+    id: source.id || makeId(title),
+    title,
+    date: source.date || fallback.date || "",
+    intro: source.intro || source.text || fallback.intro || "",
+    people: source.people || fallback.people || "",
+    image: source.image || fallback.image || "",
+    body: source.body || source.text || fallback.body || "",
+  };
+}
+
+function normalizeWork(item = {}) {
+  const title = item.title || "Untitled";
+  return {
+    id: item.id || makeId(title),
+    title,
+    date: item.date || "",
+    text: item.text || item.intro || "",
+    people: item.people || "",
+    image: item.image || "",
+    body: item.body || item.text || item.intro || "",
+  };
+}
+
+function normalizePerson(item = {}) {
+  if (Array.isArray(item)) {
+    return {
+      id: makeId(item[0]),
+      photo: "",
+      name: item[0] || "Untitled",
+      email: "",
+      interests: item[1] || "",
+      history: item[1] || "",
+      experience: "",
+    };
+  }
+  const name = item.name || item.title || "Untitled";
+  return {
+    id: item.id || makeId(name),
+    photo: item.photo || item.image || "",
+    name,
+    email: item.email || "",
+    interests: item.interests || item.interest || item.text || "",
+    history: item.history || item.bio || "",
+    experience: item.experience || "",
+  };
+}
+
 function safeContent(input) {
+  const boardInput = input.board || {};
+  const legacyNews = Array.isArray(input.news) ? input.news : [];
+  const legacyProjects = Array.isArray(input.projects) ? input.projects : [];
+  const legacyRows = Array.isArray(input.boardRows)
+    ? input.boardRows.map(([date, title, text]) => ({ date, title, intro: text, body: text }))
+    : [];
+
   return {
     ...defaultContent,
     ...input,
@@ -61,12 +128,23 @@ function safeContent(input) {
       ...(input.about || {}),
       sections: Array.isArray(input.about?.sections) ? input.about.sections : defaultContent.about.sections,
     },
-    news: Array.isArray(input.news) ? input.news : defaultContent.news,
-    works: Array.isArray(input.works) ? input.works : defaultContent.works,
-    projects: Array.isArray(input.projects) ? input.projects : defaultContent.projects,
+    board: {
+      news: (Array.isArray(boardInput.news) ? boardInput.news : legacyNews.length ? legacyNews : legacyRows).map((item) =>
+        normalizeBoardItem(item),
+      ),
+      projects: (Array.isArray(boardInput.projects) ? boardInput.projects : legacyProjects).map((item) =>
+        normalizeBoardItem(item),
+      ),
+      research: (Array.isArray(boardInput.research) ? boardInput.research : defaultContent.board.research).map((item) =>
+        normalizeBoardItem(item),
+      ),
+    },
+    news: undefined,
+    works: (Array.isArray(input.works) ? input.works : defaultContent.works).map((item) => normalizeWork(item)),
+    projects: undefined,
     archive: Array.isArray(input.archive) ? input.archive : defaultContent.archive,
-    people: Array.isArray(input.people) ? input.people : defaultContent.people,
-    boardRows: Array.isArray(input.boardRows) ? input.boardRows : defaultContent.boardRows,
+    people: (Array.isArray(input.people) ? input.people : defaultContent.people).map((item) => normalizePerson(item)),
+    boardRows: undefined,
   };
 }
 

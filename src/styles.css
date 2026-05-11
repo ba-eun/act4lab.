@@ -191,20 +191,44 @@ svg {
   backdrop-filter: blur(18px);
 }
 
-.mobile-panel a {
+.mobile-panel-item {
+  border-bottom: 1px solid var(--line);
+}
+
+.mobile-panel-main {
   display: grid;
   grid-template-columns: 70px 1fr;
   align-items: center;
   min-height: 86px;
-  border-bottom: 1px solid var(--line);
   font-size: clamp(2.2rem, 7vw, 5.8rem);
   font-weight: 900;
 }
 
-.mobile-panel span {
+.mobile-panel-main span {
   color: var(--primary-2);
   font-size: 0.9rem;
   font-weight: 800;
+}
+
+.mobile-panel-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px clamp(18px, 3vw, 42px);
+  margin-top: -12px;
+  margin-left: 70px;
+  padding-bottom: 24px;
+}
+
+.mobile-panel-sub a {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: clamp(1rem, 1.8vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transition: color 0.25s ease;
+}
+
+.mobile-panel-sub a:hover {
+  color: var(--primary-2);
 }
 
 .mobile-close {
@@ -524,6 +548,20 @@ svg {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.people-card figure {
+  margin: 0 0 28px;
+  overflow: hidden;
+  border: 1px solid var(--soft-line);
+  background: #111;
+}
+
+.people-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1.12;
+  object-fit: cover;
+  filter: grayscale(1) brightness(0.62) contrast(1.1);
+}
+
 .people-card span {
   color: var(--primary-2);
   font-weight: 900;
@@ -597,6 +635,47 @@ svg {
   border-top: 1px solid var(--line);
 }
 
+.board-hub {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.board-hub-card {
+  display: grid;
+  align-content: space-between;
+  min-height: 360px;
+  border: 1px solid var(--line);
+  padding: clamp(32px, 4vw, 62px);
+  background: rgba(255, 255, 255, 0.025);
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease,
+    transform 0.3s ease;
+}
+
+.board-hub-card:hover {
+  border-color: var(--primary-2);
+  background: rgba(158, 203, 255, 0.055);
+  transform: translateY(-4px);
+}
+
+.board-hub-card span {
+  color: var(--primary-2);
+  font-weight: 900;
+}
+
+.board-hub-card strong {
+  font-size: clamp(2.2rem, 4.4vw, 5.4rem);
+  line-height: 0.95;
+}
+
+.board-hub-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-weight: 800;
+}
+
 .board-head,
 .board-row {
   display: grid;
@@ -624,6 +703,53 @@ svg {
   margin: 0;
   color: rgba(255, 255, 255, 0.66);
   line-height: 1.7;
+}
+
+.detail-page {
+  display: grid;
+  gap: clamp(34px, 5vw, 74px);
+}
+
+.detail-hero {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #111;
+}
+
+.detail-hero img {
+  width: 100%;
+  max-height: 72vh;
+  object-fit: cover;
+  filter: grayscale(1) brightness(0.64) contrast(1.12);
+}
+
+.detail-fields {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+
+.detail-field {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 40px;
+  border-bottom: 1px solid var(--soft-line);
+  padding: clamp(24px, 3.5vw, 48px) 0;
+}
+
+.detail-field span {
+  color: var(--primary-2);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.detail-field p {
+  white-space: pre-line;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(1.08rem, 1.4vw, 1.5rem);
+  line-height: 1.75;
 }
 
 .contact-container {
@@ -1022,6 +1148,58 @@ svg {
   font-size: clamp(1.4rem, 2vw, 2.4rem);
 }
 
+.admin-section-block {
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+  border-top: 1px solid var(--soft-line);
+  padding-top: 24px;
+}
+
+.admin-section-head,
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-section-head h2,
+.admin-section-head h3 {
+  margin: 0;
+}
+
+.admin-section-head button,
+.admin-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  padding: 0 14px;
+  background: transparent;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-section-head button:hover {
+  background: var(--primary-2);
+  color: #000;
+}
+
+.admin-danger {
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.admin-danger:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1308,6 +1486,10 @@ svg {
     grid-template-columns: 1fr;
   }
 
+  .board-hub {
+    grid-template-columns: 1fr;
+  }
+
   .people-card {
     min-height: 300px;
   }
@@ -1325,6 +1507,11 @@ svg {
     gap: 10px;
     align-items: start;
     padding: 28px 0;
+  }
+
+  .detail-field {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .board-row strong {
