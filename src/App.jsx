@@ -17,7 +17,7 @@ const navItems = [
     children: [
       { label: "News", path: "/board/news" },
       { label: "Project", path: "/board/project" },
-      { label: "Research", path: "/board/research" },
+      { label: "Publications", path: "/board/publications" },
     ],
   },
   { label: "Contact", path: "/contact" },
@@ -26,8 +26,13 @@ const navItems = [
 const boardSections = {
   news: { title: "News", dataKey: "news", path: "/board/news" },
   project: { title: "Project", dataKey: "projects", path: "/board/project" },
-  research: { title: "Research", dataKey: "research", path: "/board/research" },
+  publications: { title: "Publications", dataKey: "research", path: "/board/publications" },
 };
+
+function normalizeBoardSection(section) {
+  if (section === "research" || section === "dissertation") return "publications";
+  return section;
+}
 
 const ContentContext = createContext(defaultContent);
 const ContentActionsContext = createContext({ setContentFromCms: () => {}, refreshContent: async () => {} });
@@ -111,7 +116,7 @@ function currentPagePath() {
 }
 
 function getBoardItems(content, section) {
-  const key = boardSections[section]?.dataKey || section;
+  const key = boardSections[normalizeBoardSection(section)]?.dataKey || section;
   return content.board?.[key] || [];
 }
 
@@ -999,9 +1004,10 @@ function BoardPage() {
 function BoardListPage({ section }) {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
-  const meta = boardSections[section];
+  const canonicalSection = normalizeBoardSection(section);
+  const meta = boardSections[canonicalSection];
   if (!meta) return <NotFoundPage />;
-  const items = indexedRenderableItems(getBoardItems(content, section), BOARD_LIST_FIELDS, editor.isEditing);
+  const items = indexedRenderableItems(getBoardItems(content, canonicalSection), BOARD_LIST_FIELDS, editor.isEditing);
   const renderBoardRow = (item, isEmpty) => (
     <>
       {isEmpty ? <EmptyEntryPlaceholder label={`空 ${meta.title} 条目`} /> : (
@@ -1056,8 +1062,9 @@ function BoardListPage({ section }) {
 function BoardDetailPage({ section, id }) {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
-  const meta = boardSections[section];
-  const list = getBoardItems(content, section);
+  const canonicalSection = normalizeBoardSection(section);
+  const meta = boardSections[canonicalSection];
+  const list = getBoardItems(content, canonicalSection);
   const item = findById(list, id);
   if (!meta || !item || (!editor.isEditing && isEmptyContentItem(item, BOARD_CONTENT_FIELDS))) return <NotFoundPage />;
   const itemIndex = findIndexById(list, id);
@@ -2415,7 +2422,7 @@ function AdminEditModal({ modal, onClose, uploadImage }) {
 function BoardEditor({ draft, addBoardItem, removeBoardItem, updateBoardItem, uploadImage }) {
   return (
     <section className="admin-panel" id="admin-board-content">
-      <h2>Board / News / Project / Research</h2>
+      <h2>Board / News / Project / Publications</h2>
       {Object.entries(boardSections).map(([section, meta]) => {
         const key = meta.dataKey;
         return (
@@ -2589,7 +2596,9 @@ function getAdminCrumbs(path, content) {
     contact: "Contact",
     news: "News",
     project: "Project",
-    research: "Research",
+    publications: "Publications",
+    dissertation: "Publications",
+    research: "Publications",
   };
   const crumbs = [{ label: "Admin", href: "/admin" }];
   if (!parts.length) return [...crumbs, { label: "Home", href: "/admin" }];
