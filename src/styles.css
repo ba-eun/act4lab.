@@ -445,8 +445,7 @@ svg {
   padding-top: 30px;
 }
 
-.cont-group .num,
-.about-list .num {
+.cont-group .num {
   color: var(--primary-2);
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -478,6 +477,7 @@ svg {
 }
 
 .object-band span {
+  position: relative;
   display: grid;
   place-items: center;
   border-right: 1px solid var(--soft-line);
@@ -486,43 +486,31 @@ svg {
   font-weight: 800;
 }
 
+.object-band b {
+  font: inherit;
+}
+
+.object-band small {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  color: var(--primary-2);
+  font-size: clamp(0.68rem, 0.8vw, 0.9rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
 .object-band span:last-child {
   border-right: 0;
 }
 
-.about-list {
-  display: grid;
-  gap: 0;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  border-top: 1px solid var(--line);
-}
-
-.about-list li {
-  display: grid;
-  grid-template-columns: 0.42fr 1fr;
-  gap: clamp(24px, 4vw, 70px);
-  border-bottom: 1px solid var(--soft-line);
-  padding: 28px 0;
-}
-
-.about-list .subj {
-  margin: 0;
-  color: #fff;
-  font-size: clamp(1.2rem, 1.6vw, 1.9rem);
-  font-weight: 800;
-}
-
-.about-list .num {
-  display: inline-block;
-  min-width: 52px;
-}
-
-.about-list .comment {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.68);
+.about-note {
+  max-width: 820px;
+  margin: 0 auto;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: clamp(0.92rem, 1vw, 1.08rem);
   line-height: 1.85;
+  text-align: center;
 }
 
 .professor-label {
@@ -1463,7 +1451,6 @@ svg {
   }
 
   .cont-group,
-  .about-list li,
   .work-row,
   .contact-container .item {
     grid-template-columns: 1fr;

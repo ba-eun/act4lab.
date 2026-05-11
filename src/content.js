@@ -1,200 +1,200 @@
 const defaultContent = {
-  site: {
-    topLine: "ACT IV CROSS-MEDIA & MULTIMODAL",
-    logo: "/logo2.png",
-    contactEmail: "act4lab@163.com",
-    contactAddress: "\nACT IV 未来视觉研究室",
-    contactDirections: "品牌视觉 / 动态影像 / 交互体验 / AIGC / 跨媒介视觉",
-    footerTagline: "视觉系统、动态叙事、交互原型与未来媒介实验。",
+  "site": {
+    "topLine": "ACT IV CROSS-MEDIA & MULTIMODAL",
+    "logo": "/logo2.png",
+    "contactEmail": "act4lab@163.com",
+    "contactAddress": "\nACT IV 未来视觉研究室",
+    "contactDirections": "品牌视觉 / 动态影像 / 交互体验 / AIGC / 跨媒介视觉",
+    "footerTagline": "跨媒介与多模态未来视觉"
   },
-  homeIntro: [
+  "homeIntro": [
     "ACT IV 将“打破第四堵墙”转化为一种未来视觉研究方法：艺术与科技融合，传统视觉语言与前沿媒介对话，设计从平面图像进入屏幕、界面、空间与智能生成场景。",
-    "研究室围绕四幕递进展开：静态秩序、动态叙事、交互对话与未来视觉融合。每一幕都可以独立深耕，合在一起则构成完整的跨媒介视觉系统。",
+    "研究室围绕四幕递进展开：静态秩序、动态叙事、交互对话与未来视觉融合。每一幕都可以独立深耕，合在一起则构成完整的跨媒介视觉系统。"
   ],
-  about: {
-    label: "ACT IV LAB. 介绍",
-    title: "未来视觉设计研究室",
-    sections: [
+  "about": {
+    "label": "ACT IV LAB. 介绍",
+    "title": "未来视觉设计研究室",
+    "sections": [
       {
-        number: "01",
-        title: "研究室定位",
-        paragraphs: [
+        "number": "01",
+        "title": "研究室定位",
+        "paragraphs": [
           "ACT IV 以传统视觉传达设计为根基，向动态、交互、AI 与跨媒介视觉方向延展。",
-          "研究室关注图像如何从静态秩序进入时间、界面、空间与智能生成场景，形成兼具审美强度与落地能力的视觉方案。",
-        ],
+          "研究室关注图像如何从静态秩序进入时间、界面、空间与智能生成场景，形成兼具审美强度与落地能力的视觉方案。"
+        ]
       },
       {
-        number: "02",
-        title: "核心理念",
-        paragraphs: [
+        "number": "02",
+        "title": "核心理念",
+        "paragraphs": [
           "数字化语境下的创造性融合，是 ACT IV 的核心方法。",
-          "设计思维提供感性洞察、动态叙事与交互美学；产业实践提供用户中心、技术整合与商业逻辑。两者共同让设计拥有灵魂，也拥有可持续的现实生命力。",
-        ],
-      },
-    ],
+          "设计思维提供感性洞察、动态叙事与交互美学；产业实践提供用户中心、技术整合与商业逻辑。两者共同让设计拥有灵魂，也拥有可持续的现实生命力。"
+        ]
+      }
+    ]
   },
-  board: {
-    news: [
+  "board": {
+    "news": [
       {
-        id: "future-visual-lab",
-        title: "未来视觉研究室",
-        date: "2026-05",
-        intro: "面向数字时代的未来视觉研究室，聚焦视觉系统、动态叙事、交互体验与跨媒介实验。",
-        people: "ACT IV",
-        image: "/work-1.svg",
-        body: "面向数字时代的未来视觉研究室，聚焦视觉系统、动态叙事、交互体验与跨媒介实验。",
+        "id": "future-visual-lab",
+        "title": "未来视觉研究室",
+        "date": "2026-05",
+        "intro": "面向数字时代的未来视觉研究室，聚焦视觉系统、动态叙事、交互体验与跨媒介实验。",
+        "people": "ACT IV",
+        "image": "/work-1.svg",
+        "body": "面向数字时代的未来视觉研究室，聚焦视觉系统、动态叙事、交互体验与跨媒介实验。"
       },
       {
-        id: "creative-fusion",
-        title: "创造性融合",
-        date: "ACT 00",
-        intro: "以设计思维连接真实场景，让图像、界面、空间与智能生成共同形成可落地的视觉方案。",
-        people: "ACT IV",
-        image: "/work-2.svg",
-        body: "以设计思维连接真实场景，让图像、界面、空间与智能生成共同形成可落地的视觉方案。",
+        "id": "creative-fusion",
+        "title": "创造性融合",
+        "date": "ACT 00",
+        "intro": "以设计思维连接真实场景，让图像、界面、空间与智能生成共同形成可落地的视觉方案。",
+        "people": "ACT IV",
+        "image": "/work-2.svg",
+        "body": "以设计思维连接真实场景，让图像、界面、空间与智能生成共同形成可落地的视觉方案。"
       },
       {
-        id: "beyond-fourth-wall",
-        title: "突破第四堵墙",
-        date: "LAB NOTE",
-        intro: "突破屏幕、身体、场域与媒介之间的边界，建立更开放的视觉感知与表达方式。",
-        people: "ACT IV",
-        image: "/work-3.svg",
-        body: "突破屏幕、身体、场域与媒介之间的边界，建立更开放的视觉感知与表达方式。",
-      },
+        "id": "beyond-fourth-wall",
+        "title": "突破第四堵墙",
+        "date": "LAB NOTE",
+        "intro": "突破屏幕、身体、场域与媒介之间的边界，建立更开放的视觉感知与表达方式。",
+        "people": "ACT IV",
+        "image": "/work-3.svg",
+        "body": "突破屏幕、身体、场域与媒介之间的边界，建立更开放的视觉感知与表达方式。"
+      }
     ],
-    projects: [
+    "projects": [
       {
-        id: "visual-system",
-        title: "品牌与视觉系统",
-        date: "PROJECT 01",
-        intro: "品牌识别系统、版式结构、包装逻辑与界面视觉规范。",
-        people: "ACT IV",
-        image: "/work-1.svg",
-        body: "品牌识别系统、版式结构、包装逻辑与界面视觉规范。",
+        "id": "visual-system",
+        "title": "品牌与视觉系统",
+        "date": "PROJECT 01",
+        "intro": "品牌识别系统、版式结构、包装逻辑与界面视觉规范。",
+        "people": "ACT IV",
+        "image": "/work-1.svg",
+        "body": "品牌识别系统、版式结构、包装逻辑与界面视觉规范。"
       },
       {
-        id: "motion-narrative",
-        title: "动态视觉叙事",
-        date: "PROJECT 02",
-        intro: "动态视觉设计、短视频影像系统、生成式节奏与 MG 动画。",
-        people: "ACT IV",
-        image: "/work-2.svg",
-        body: "动态视觉设计、短视频影像系统、生成式节奏与 MG 动画。",
+        "id": "motion-narrative",
+        "title": "动态视觉叙事",
+        "date": "PROJECT 02",
+        "intro": "动态视觉设计、短视频影像系统、生成式节奏与 MG 动画。",
+        "people": "ACT IV",
+        "image": "/work-2.svg",
+        "body": "动态视觉设计、短视频影像系统、生成式节奏与 MG 动画。"
       },
       {
-        id: "interactive-experience",
-        title: "交互体验原型",
-        date: "PROJECT 03",
-        intro: "用户体验研究、交互原型、空间界面与响应式服务流程。",
-        people: "ACT IV",
-        image: "/work-3.svg",
-        body: "用户体验研究、交互原型、空间界面与响应式服务流程。",
+        "id": "interactive-experience",
+        "title": "交互体验原型",
+        "date": "PROJECT 03",
+        "intro": "用户体验研究、交互原型、空间界面与响应式服务流程。",
+        "people": "ACT IV",
+        "image": "/work-3.svg",
+        "body": "用户体验研究、交互原型、空间界面与响应式服务流程。"
       },
       {
-        id: "future-media",
-        title: "未来媒介视觉场",
-        date: "PROJECT 04",
-        intro: "AIGC 辅助设计、多模态内容、投影映射与跨媒介视觉场。",
-        people: "ACT IV",
-        image: "/work-4.svg",
-        body: "AIGC 辅助设计、多模态内容、投影映射与跨媒介视觉场。",
-      },
+        "id": "future-media",
+        "title": "未来媒介视觉场",
+        "date": "PROJECT 04",
+        "intro": "AIGC 辅助设计、多模态内容、投影映射与跨媒介视觉场。",
+        "people": "ACT IV",
+        "image": "/work-4.svg",
+        "body": "AIGC 辅助设计、多模态内容、投影映射与跨媒介视觉场。"
+      }
     ],
-    research: [
+    "research": [
       {
-        id: "cross-media-method",
-        title: "跨媒介视觉方法",
-        date: "RESEARCH 01",
-        intro: "研究图像如何在屏幕、界面、空间与智能生成场景中转换。",
-        people: "ACT IV",
-        image: "/work-4.svg",
-        body: "研究图像如何在屏幕、界面、空间与智能生成场景中转换，并形成可落地的视觉系统。",
-      },
-    ],
+        "id": "cross-media-method",
+        "title": "跨媒介视觉方法",
+        "date": "RESEARCH 01",
+        "intro": "研究图像如何在屏幕、界面、空间与智能生成场景中转换。",
+        "people": "ACT IV",
+        "image": "/work-4.svg",
+        "body": "研究图像如何在屏幕、界面、空间与智能生成场景中转换，并形成可落地的视觉系统。"
+      }
+    ]
   },
-  works: [
+  "works": [
     {
-      id: "gaze-order",
-      title: "凝视 / 秩序",
-      date: "ACT I",
-      text: "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
-      people: "ACT IV",
-      image: "/work-1.svg",
-      body: "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+      "id": "gaze-order",
+      "title": "凝视 / 秩序",
+      "date": "ACT I",
+      "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+      "people": "ACT IV",
+      "image": "/work-1.svg",
+      "body": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。"
     },
     {
-      id: "flow-narrative",
-      title: "流动 / 叙事",
-      date: "ACT II",
-      text: "动态视觉、短片节奏、生成动画与声音关系让图像进入时间维度。",
-      people: "ACT IV",
-      image: "/work-2.svg",
-      body: "动态视觉、短片节奏、生成动画与声音关系让图像进入时间维度。",
+      "id": "flow-narrative",
+      "title": "流动 / 叙事",
+      "date": "ACT II",
+      "text": "动态视觉、短片节奏、生成动画与声音关系让图像进入时间维度。",
+      "people": "ACT IV",
+      "image": "/work-2.svg",
+      "body": "动态视觉、短片节奏、生成动画与声音关系让图像进入时间维度。"
     },
     {
-      id: "dialogue-symbiosis",
-      title: "对话 / 共生",
-      date: "ACT III",
-      text: "交互原型、用户路径、空间界面与行为反馈组成可被触发的体验系统。",
-      people: "ACT IV",
-      image: "/work-3.svg",
-      body: "交互原型、用户路径、空间界面与行为反馈组成可被触发的体验系统。",
+      "id": "dialogue-symbiosis",
+      "title": "对话 / 共生",
+      "date": "ACT III",
+      "text": "交互原型、用户路径、空间界面与行为反馈组成可被触发的体验系统。",
+      "people": "ACT IV",
+      "image": "/work-3.svg",
+      "body": "交互原型、用户路径、空间界面与行为反馈组成可被触发的体验系统。"
     },
     {
-      id: "breakthrough-fusion",
-      title: "破墙 / 融合",
-      date: "ACT IV",
-      text: "AIGC、多模态内容、投影映射与跨媒介叙事连接屏幕之外的视觉现场。",
-      people: "ACT IV",
-      image: "/work-4.svg",
-      body: "AIGC、多模态内容、投影映射与跨媒介叙事连接屏幕之外的视觉现场。",
-    },
+      "id": "breakthrough-fusion",
+      "title": "破墙 / 融合",
+      "date": "ACT IV",
+      "text": "AIGC、多模态内容、投影映射与跨媒介叙事连接屏幕之外的视觉现场。",
+      "people": "ACT IV",
+      "image": "/work-4.svg",
+      "body": "AIGC、多模态内容、投影映射与跨媒介叙事连接屏幕之外的视觉现场。"
+    }
   ],
-  people: [
+  "people": [
     {
-      id: "static-visual-system",
-      photo: "/work-1.svg",
-      name: "静态视觉系统",
-      email: "",
-      interests: "品牌、版式、界面与图像秩序",
-      history: "建立品牌、版式、界面与图像秩序的基础语言。",
-      experience: "",
+      "id": "static-visual-system",
+      "photo": "/work-1.svg",
+      "name": "静态视觉系统",
+      "email": "",
+      "interests": "品牌、版式、界面与图像秩序",
+      "history": "建立品牌、版式、界面与图像秩序的基础语言。",
+      "experience": ""
     },
     {
-      id: "motion-narrative",
-      photo: "/work-2.svg",
-      name: "动态叙事",
-      email: "",
-      interests: "时间、节奏、声音与生成影像",
-      history: "把图像带入时间、节奏、声音与生成影像的复合关系。",
-      experience: "",
+      "id": "motion-narrative",
+      "photo": "/work-2.svg",
+      "name": "动态叙事",
+      "email": "",
+      "interests": "时间、节奏、声音与生成影像",
+      "history": "把图像带入时间、节奏、声音与生成影像的复合关系。",
+      "experience": ""
     },
     {
-      id: "interactive-experience",
-      photo: "/work-3.svg",
-      name: "交互体验",
-      email: "",
-      interests: "界面、空间与行为反馈",
-      history: "让观看转化为回应，在界面、空间与行为之间建立对话。",
-      experience: "",
+      "id": "interactive-experience",
+      "photo": "/work-3.svg",
+      "name": "交互体验",
+      "email": "",
+      "interests": "界面、空间与行为反馈",
+      "history": "让观看转化为回应，在界面、空间与行为之间建立对话。",
+      "experience": ""
     },
     {
-      id: "future-media",
-      photo: "/work-4.svg",
-      name: "未来媒介",
-      email: "",
-      interests: "AI、多模态、投影映射与跨媒介视觉现场",
-      history: "探索 AI、多模态、投影映射与跨媒介视觉现场。",
-      experience: "",
-    },
+      "id": "future-media",
+      "photo": "/work-4.svg",
+      "name": "未来媒介",
+      "email": "",
+      "interests": "AI、多模态、投影映射与跨媒介视觉现场",
+      "history": "探索 AI、多模态、投影映射与跨媒介视觉现场。",
+      "experience": ""
+    }
   ],
-  archive: [
-    ["动作链", "凝视 -> 流动 -> 对话 -> 破墙"],
-    ["状态链", "秩序 -> 叙事 -> 共生 -> 融合"],
-    ["核心逻辑", "个体可专精，组合成体系"],
-    ["研究室精神", "艺术与科技融合，传统与前沿对话，设计与真实场景贯通"],
-  ],
+  "archive": [
+    [
+      "研究室精神",
+      "艺术与科技融合，传统与前沿对话，设计与真实场景贯通"
+    ]
+  ]
 };
 
 export default defaultContent;

@@ -375,22 +375,24 @@ function AboutPage() {
           </section>
         ))}
         <div className="object-band" aria-hidden="true">
-          <span>Gaze</span>
-          <span>Flow</span>
-          <span>Dialogue</span>
-          <span>Breakthrough</span>
+          <span>
+            <b>凝视/秩序</b>
+            <small>ACT I</small>
+          </span>
+          <span>
+            <b>流动/叙事</b>
+            <small>ACT II</small>
+          </span>
+          <span>
+            <b>对话/共生</b>
+            <small>ACT III</small>
+          </span>
+          <span>
+            <b>破壁/融合</b>
+            <small>ACT IV</small>
+          </span>
         </div>
-        <ul className="about-list reveal-section">
-          {content.archive.map(([title, text], index) => (
-            <li className="reveal-item" key={title}>
-              <p className="subj">
-                <span className="num">{String(index + 1).padStart(2, "0")}</span>
-                {title}
-              </p>
-              <p className="comment">{text}</p>
-            </li>
-          ))}
-        </ul>
+        <p className="about-note reveal-section reveal-item">{content.archive.at(-1)?.[1]}</p>
       </div>
     </PageShell>
   );
