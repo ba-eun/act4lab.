@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, ImagePlus, Loader2, LogOut, Menu, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, ImagePlus, Loader2, LogOut, Menu, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
@@ -702,12 +702,12 @@ function NotFoundPage() {
   );
 }
 
-function TextInput({ label, value, onChange, multiline = false, type = "text" }) {
+function TextInput({ label, value, onChange, multiline = false, type = "text", rows = 4 }) {
   return (
     <label className="admin-field">
       <span>{label}</span>
       {multiline ? (
-        <textarea value={value || ""} onChange={(event) => onChange(event.target.value)} rows={4} />
+        <textarea value={value || ""} onChange={(event) => onChange(event.target.value)} rows={rows} />
       ) : (
         <input type={type} value={value || ""} onChange={(event) => onChange(event.target.value)} />
       )}
@@ -753,17 +753,17 @@ function AdminPage() {
       .catch(() => setDraft(publicContent));
   }, [loggedIn]);
 
-  const save = async () => {
+  const persistContent = async (contentToSave = draft) => {
     setSaving(true);
     setMessage("");
     const response = await fetch("/api/content", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
+      body: JSON.stringify(contentToSave),
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      const savedContent = data.content || draft;
+      const savedContent = data.content || contentToSave;
       setDraft(savedContent);
       setContentFromCms(savedContent);
       notifyContentUpdated();
@@ -771,6 +771,8 @@ function AdminPage() {
     setSaving(false);
     setMessage(response.ok ? "已保存，前台已同步更新。" : "保存失败，请检查服务器。");
   };
+
+  const save = () => persistContent(draft);
 
   const login = async (event) => {
     event.preventDefault();
@@ -870,54 +872,555 @@ function AdminPage() {
   }
 
   return (
-    <main className="admin-screen">
-      <section className="admin-board">
-        <div className="admin-toolbar">
+    <AdminVisualEditor
+      draft={draft}
+      setDraft={setDraft}
+      save={save}
+      persistContent={persistContent}
+      saving={saving}
+      logout={logout}
+      message={message}
+      uploadImage={uploadImage}
+    />
+  );
+}
+
+function splitAdminParagraphs(value) {
+  return String(value || "")
+    .split(/\n{2,}/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logout, message, uploadImage }) {
+  const [modal, setModal] = useState(null);
+  const site = draft.site || {};
+  const about = draft.about || {};
+
+  const commitDraft = (updater) => {
+    const nextDraft = typeof updater === "function" ? updater(draft) : updater;
+    setDraft(nextDraft);
+    persistContent(nextDraft);
+  };
+
+  const openSiteEditor = () => {
+    setModal({
+      title: "编辑基础信息",
+      initial: {
+        topLine: site.topLine || "",
+        logo: site.logo || "",
+        contactAddress: site.contactAddress || "",
+        contactEmail: site.contactEmail || "",
+        contactDirections: site.contactDirections || "",
+        footerTagline: site.footerTagline || "",
+      },
+      fields: [
+        { name: "topLine", label: "顶部细条文案" },
+        { name: "logo", label: "Logo 图片地址", type: "image" },
+        { name: "contactAddress", label: "地址", type: "textarea" },
+        { name: "contactEmail", label: "邮箱" },
+        { name: "contactDirections", label: "方向", type: "textarea" },
+        { name: "footerTagline", label: "页脚说明", type: "textarea" },
+      ],
+      onSubmit: (values) =>
+        commitDraft((current) => ({
+          ...current,
+          site: { ...current.site, ...values },
+        })),
+    });
+  };
+
+  const openHomeEditor = () => {
+    setModal({
+      title: "编辑首页介绍",
+      initial: { homeIntro: (draft.homeIntro || []).join("\n\n") },
+      fields: [{ name: "homeIntro", label: "首页介绍", type: "textarea", rows: 8 }],
+      onSubmit: (values) =>
+        commitDraft((current) => ({
+          ...current,
+          homeIntro: splitAdminParagraphs(values.homeIntro),
+        })),
+    });
+  };
+
+  const openAboutHeadingEditor = () => {
+    setModal({
+      title: "编辑 About LAB 标题",
+      initial: { label: about.label || "", title: about.title || "" },
+      fields: [
+        { name: "label", label: "标签" },
+        { name: "title", label: "标题" },
+      ],
+      onSubmit: (values) =>
+        commitDraft((current) => ({
+          ...current,
+          about: { ...current.about, ...values },
+        })),
+    });
+  };
+
+  const openAboutSectionEditor = (section, index) => {
+    setModal({
+      title: "编辑 About LAB 内容",
+      initial: {
+        number: section.number || "",
+        title: section.title || "",
+        paragraphs: (section.paragraphs || []).join("\n\n"),
+      },
+      fields: [
+        { name: "number", label: "编号" },
+        { name: "title", label: "标题" },
+        { name: "paragraphs", label: "正文", type: "textarea", rows: 8 },
+      ],
+      onSubmit: (values) =>
+        commitDraft((current) => ({
+          ...current,
+          about: {
+            ...current.about,
+            sections: (current.about?.sections || []).map((item, itemIndex) =>
+              itemIndex === index
+                ? { ...item, number: values.number, title: values.title, paragraphs: splitAdminParagraphs(values.paragraphs) }
+                : item,
+            ),
+          },
+        })),
+    });
+  };
+
+  const openArchiveEditor = () => {
+    const latest = draft.archive?.at(-1) || ["研究室精神", ""];
+    setModal({
+      title: "编辑底部理念句",
+      initial: { label: latest[0] || "", text: latest[1] || "" },
+      fields: [
+        { name: "label", label: "内部标签" },
+        { name: "text", label: "显示文案", type: "textarea" },
+      ],
+      onSubmit: (values) =>
+        commitDraft((current) => ({
+          ...current,
+          archive: [[values.label || "研究室精神", values.text || ""]],
+        })),
+    });
+  };
+
+  const peopleFields = [
+    { name: "photo", label: "照片", type: "image" },
+    { name: "name", label: "姓名" },
+    { name: "email", label: "邮箱" },
+    { name: "interests", label: "兴趣方向", type: "textarea" },
+    { name: "history", label: "经历", type: "textarea" },
+    { name: "experience", label: "经验", type: "textarea" },
+  ];
+  const workFields = [
+    { name: "image", label: "图片", type: "image" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
+    { name: "people", label: "人员" },
+    { name: "text", label: "介绍", type: "textarea" },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
+  ];
+  const boardFields = [
+    { name: "image", label: "图片", type: "image" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
+    { name: "people", label: "人员 / 作者" },
+    { name: "intro", label: "介绍", type: "textarea" },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
+  ];
+
+  const openPersonEditor = (person = {}, index = null) => {
+    setModal({
+      title: index === null ? "增加 People 条目" : "编辑 People 条目",
+      initial: {
+        photo: person.photo || "",
+        name: person.name || "",
+        email: person.email || "",
+        interests: person.interests || "",
+        history: person.history || "",
+        experience: person.experience || "",
+      },
+      fields: peopleFields,
+      onSubmit: (values) =>
+        commitDraft((current) => {
+          const nextItem = {
+            ...person,
+            ...values,
+            id: person.id || makeId(values.name || `person-${Date.now()}`),
+          };
+          return {
+            ...current,
+            people:
+              index === null
+                ? [...(current.people || []), nextItem]
+                : (current.people || []).map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+          };
+        }),
+    });
+  };
+
+  const removePerson = (index) => {
+    if (!window.confirm("确认删除这个 People 条目？")) return;
+    commitDraft((current) => ({
+      ...current,
+      people: (current.people || []).filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const openWorkEditor = (work = {}, index = null) => {
+    setModal({
+      title: index === null ? "增加 Works 条目" : "编辑 Works 条目",
+      initial: {
+        image: work.image || "",
+        title: work.title || "",
+        date: work.date || "",
+        people: work.people || "",
+        text: work.text || "",
+        body: work.body || "",
+      },
+      fields: workFields,
+      onSubmit: (values) =>
+        commitDraft((current) => {
+          const nextItem = {
+            ...work,
+            ...values,
+            id: work.id || makeId(values.title || `work-${Date.now()}`),
+          };
+          return {
+            ...current,
+            works:
+              index === null
+                ? [...(current.works || []), nextItem]
+                : (current.works || []).map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+          };
+        }),
+    });
+  };
+
+  const removeWork = (index) => {
+    if (!window.confirm("确认删除这个 Works 条目？")) return;
+    commitDraft((current) => ({
+      ...current,
+      works: (current.works || []).filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const openBoardEditor = (sectionKey, item = {}, index = null) => {
+    setModal({
+      title: `${index === null ? "增加" : "编辑"} Board 条目`,
+      initial: {
+        image: item.image || "",
+        title: item.title || "",
+        date: item.date || "",
+        people: item.people || "",
+        intro: item.intro || "",
+        body: item.body || "",
+      },
+      fields: boardFields,
+      onSubmit: (values) =>
+        commitDraft((current) => {
+          const nextItem = {
+            ...item,
+            ...values,
+            id: item.id || makeId(values.title || `item-${Date.now()}`),
+          };
+          const list = current.board?.[sectionKey] || [];
+          return {
+            ...current,
+            board: {
+              ...current.board,
+              [sectionKey]: index === null ? [...list, nextItem] : list.map((entry, itemIndex) => (itemIndex === index ? nextItem : entry)),
+            },
+          };
+        }),
+    });
+  };
+
+  const removeBoardItem = (sectionKey, index) => {
+    if (!window.confirm("确认删除这个 Board 条目？")) return;
+    commitDraft((current) => ({
+      ...current,
+      board: {
+        ...current.board,
+        [sectionKey]: (current.board?.[sectionKey] || []).filter((_, itemIndex) => itemIndex !== index),
+      },
+    }));
+  };
+
+  const indexedPeople = (draft.people || [])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["photo", "name", "interests", "email", "history", "experience"]));
+  const indexedWorks = (draft.works || [])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => hasAnyText(item, ["image", "title", "date", "text", "people", "body"]));
+  const contactFields = [
+    ["地址", site.contactAddress],
+    ["邮箱", site.contactEmail],
+    ["方向", site.contactDirections],
+  ].filter(([, value]) => hasText(value));
+
+  return (
+    <ContentContext.Provider value={draft}>
+      <main className="admin-preview-screen">
+        <div className="admin-floating-toolbar">
           <div>
             <span className="admin-kicker">ACT IV CMS</span>
-            <h1>网站后台管理</h1>
+            <strong>可视化后台管理</strong>
           </div>
+          <nav aria-label="后台页面导航">
+            <a href="#admin-home">Home</a>
+            <a href="#admin-about">About</a>
+            <a href="#admin-people">People</a>
+            <a href="#admin-works">Works</a>
+            <a href="#admin-board-content">Board</a>
+            <a href="#admin-contact">Contact</a>
+          </nav>
           <div className="admin-actions">
-            <button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}保存</button>
+            <button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}保存上线</button>
             <button type="button" onClick={logout}><LogOut size={18} />退出</button>
           </div>
         </div>
 
-        <nav className="admin-quicknav" aria-label="后台分区">
-          <a href="#admin-site">基础信息</a>
-          <a href="#admin-home">首页介绍</a>
-          <a href="#admin-board-content">Board</a>
-          <a href="#admin-people">People</a>
-          <a href="#admin-works">Works</a>
-        </nav>
+        <Header />
 
-        <section className="admin-panel" id="admin-site">
-          <h2>基础信息</h2>
-          <div className="admin-grid">
-            <TextInput label="顶部细条文案" value={draft.site.topLine} onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, topLine: value } }))} />
-            <TextInput label="联系邮箱" value={draft.site.contactEmail} onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, contactEmail: value } }))} />
-            <TextInput label="联系地址" value={draft.site.contactAddress} multiline onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, contactAddress: value } }))} />
-            <TextInput label="联系方向" value={draft.site.contactDirections} multiline onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, contactDirections: value } }))} />
-            <TextInput label="页脚说明" value={draft.site.footerTagline} multiline onChange={(value) => setDraft((current) => ({ ...current, site: { ...current.site, footerTagline: value } }))} />
+        <section className="sub-page admin-page-section" id="admin-home">
+          <div className="container cont-wrap">
+            <div className="sub-title admin-editable">
+              <AdminInlineControls onEdit={openHomeEditor} />
+              <p>HOME</p>
+              <h1>FUTURE VISUAL</h1>
+            </div>
+            <div className="home-admin-copy admin-editable reveal-section">
+              <AdminInlineControls onEdit={openHomeEditor} />
+              {(draft.homeIntro || []).filter(hasText).map((paragraph, index) => (
+                <p className="reveal-item" key={index}>{paragraph}</p>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="admin-panel" id="admin-home">
-          <h2>首页介绍</h2>
-          <div className="admin-grid">
-            {draft.homeIntro.map((paragraph, index) => (
-              <TextInput key={index} label={`段落 ${index + 1}`} value={paragraph} multiline onChange={(value) => setDraft((current) => ({ ...current, homeIntro: current.homeIntro.map((item, itemIndex) => itemIndex === index ? value : item) }))} />
-            ))}
+        <section className="sub-page admin-page-section" id="admin-about">
+          <div className="container cont-wrap">
+            <div className="sub-title admin-editable">
+              <AdminInlineControls onEdit={openAboutHeadingEditor} />
+              <p>{about.label || "ACT IV LAB."}</p>
+              <h1>{about.title || "About LAB"}</h1>
+            </div>
+            <div className="about-lab reveal-section">
+              {(about.sections || []).map((section, index) => (
+                <section className="cont-group reveal-item admin-editable" key={`${section.number}-${index}`}>
+                  <AdminInlineControls onEdit={() => openAboutSectionEditor(section, index)} />
+                  {hasText(section.number) ? <span className="number">{section.number}</span> : null}
+                  {hasText(section.title) ? <h2>{section.title}</h2> : null}
+                  {(section.paragraphs || []).filter(hasText).map((paragraph, paragraphIndex) => (
+                    <p key={paragraphIndex}>{paragraph}</p>
+                  ))}
+                </section>
+              ))}
+              <div className="object-band reveal-item admin-editable">
+                <AdminInlineControls onEdit={openArchiveEditor} />
+                <span data-index="01"><b>凝视/秩序</b><small>ACT I</small></span>
+                <span data-index="02"><b>流动/叙事</b><small>ACT II</small></span>
+                <span data-index="03"><b>对话/共生</b><small>ACT III</small></span>
+                <span data-index="04"><b>破壁/融合</b><small>ACT IV</small></span>
+              </div>
+              {hasText(draft.archive?.at(-1)?.[1]) ? <p className="about-note reveal-item admin-editable"><AdminInlineControls onEdit={openArchiveEditor} />{draft.archive.at(-1)?.[1]}</p> : null}
+            </div>
           </div>
         </section>
 
-        <BoardEditor draft={draft} addBoardItem={addBoardItem} removeBoardItem={removeBoardItem} updateBoardItem={updateBoardItem} uploadImage={uploadImage} />
-        <PeopleEditor draft={draft} updatePerson={updatePerson} removePerson={(index) => removeListItem("people", index)} addPerson={() => addListItem("people", { id: `person-${Date.now()}`, photo: "", name: "新成员", email: "", interests: "", history: "", experience: "" })} uploadImage={uploadImage} />
-        <WorksEditor draft={draft} updateWork={updateWork} removeWork={(index) => removeListItem("works", index)} addWork={() => addListItem("works", { id: `work-${Date.now()}`, title: "新作品", date: "", text: "", people: "", image: "", body: "" })} uploadImage={uploadImage} />
+        <section className="sub-page admin-page-section" id="admin-people">
+          <div className="container cont-wrap">
+            <div className="sub-title">
+              <p>PEOPLE</p>
+              <h1>PEOPLE</h1>
+            </div>
+            <div className="admin-section-tools">
+              <span className="professor-label">PEOPLE</span>
+              <button type="button" onClick={() => openPersonEditor()}><Plus size={16} />增加</button>
+            </div>
+            <div className="people-grid-page">
+              {indexedPeople.map(({ item, index }) => (
+                <article className="people-card admin-editable" key={item.id || index}>
+                  <AdminInlineControls onEdit={() => openPersonEditor(item, index)} onAdd={() => openPersonEditor()} onDelete={() => removePerson(index)} />
+                  {hasText(item.photo) ? (
+                    <figure>
+                      <img src={item.photo} alt="" />
+                    </figure>
+                  ) : null}
+                  {hasText(item.name) ? <h2>{item.name}</h2> : null}
+                  {hasText(item.interests) ? <h3>{item.interests}</h3> : null}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="sub-page admin-page-section" id="admin-works">
+          <div className="container cont-wrap">
+            <div className="sub-title">
+              <p>WORKS</p>
+              <h1>WORKS</h1>
+            </div>
+            <div className="admin-section-tools">
+              <span className="professor-label">WORKS</span>
+              <button type="button" onClick={() => openWorkEditor()}><Plus size={16} />增加</button>
+            </div>
+            <div className="works-page reveal-section">
+              {indexedWorks.map(({ item, index }) => (
+                <article className="work-row reveal-item admin-editable" key={item.id || index}>
+                  <AdminInlineControls onEdit={() => openWorkEditor(item, index)} onAdd={() => openWorkEditor()} onDelete={() => removeWork(index)} />
+                  {hasText(item.image) ? (
+                    <figure>
+                      <img src={item.image} alt="" />
+                    </figure>
+                  ) : null}
+                  {hasText(item.date) || hasText(item.title) || hasText(item.text) ? (
+                    <div>
+                      {hasText(item.date) ? <span>{item.date}</span> : null}
+                      {hasText(item.title) ? <h2>{item.title}</h2> : null}
+                      {hasText(item.text) ? <p>{item.text}</p> : null}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="sub-page admin-page-section" id="admin-board-content">
+          <div className="container cont-wrap">
+            <div className="sub-title">
+              <p>BOARD</p>
+              <h1>BOARD</h1>
+            </div>
+            {Object.entries(boardSections).map(([sectionKey, meta]) => {
+              const listKey = meta.dataKey;
+              const indexedItems = (draft.board?.[listKey] || [])
+                .map((item, index) => ({ item, index }))
+                .filter(({ item }) => hasAnyText(item, ["title", "date", "intro", "body", "people", "image"]));
+              return (
+                <div className="board-page admin-board-preview" key={sectionKey}>
+                  <div className="main-title">
+                    <h2>{meta.title}</h2>
+                    <button type="button" onClick={() => openBoardEditor(listKey)}><Plus size={16} />增加</button>
+                  </div>
+                  <div className="board-head reveal-item">
+                    <span>DATE</span>
+                    <span>TITLE</span>
+                    <span>INTRO</span>
+                  </div>
+                  {indexedItems.map(({ item, index }) => (
+                    <article className="board-row reveal-item admin-editable" key={item.id || index}>
+                      <AdminInlineControls onEdit={() => openBoardEditor(listKey, item, index)} onAdd={() => openBoardEditor(listKey)} onDelete={() => removeBoardItem(listKey, index)} />
+                      {hasText(item.date) ? <span>{item.date}</span> : null}
+                      {hasText(item.title) ? <strong>{item.title}</strong> : null}
+                      {hasText(item.intro || item.body) ? <p>{item.intro || item.body}</p> : null}
+                    </article>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="sub-page admin-page-section" id="admin-contact">
+          <div className="container cont-wrap">
+            <div className="sub-title admin-editable">
+              <AdminInlineControls onEdit={openSiteEditor} />
+              <p>CONTACT</p>
+              <h1>CONTACT</h1>
+            </div>
+            <div className="contact-container reveal-section admin-editable">
+              <AdminInlineControls onEdit={openSiteEditor} />
+              {contactFields.map(([label, value]) => (
+                <div className="item reveal-item" key={label}>
+                  <span className="label">{label}</span>
+                  <p className="address">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {message ? <p className="admin-message sticky-message">{message}</p> : null}
-      </section>
-    </main>
+        {modal ? <AdminEditModal modal={modal} onClose={() => setModal(null)} uploadImage={uploadImage} /> : null}
+      </main>
+    </ContentContext.Provider>
+  );
+}
+
+function AdminInlineControls({ onEdit, onAdd, onDelete }) {
+  const handleClick = (event, action) => {
+    event.preventDefault();
+    event.stopPropagation();
+    action?.();
+  };
+
+  return (
+    <div className="admin-inline-controls" aria-label="内容管理按钮">
+      {onEdit ? <button type="button" onClick={(event) => handleClick(event, onEdit)}><Pencil size={13} />编辑</button> : null}
+      {onAdd ? <button type="button" onClick={(event) => handleClick(event, onAdd)}><Plus size={13} />增加</button> : null}
+      {onDelete ? <button type="button" onClick={(event) => handleClick(event, onDelete)}><Trash2 size={13} />删除</button> : null}
+    </div>
+  );
+}
+
+function AdminEditModal({ modal, onClose, uploadImage }) {
+  const [formData, setFormData] = useState(modal.initial || {});
+
+  useEffect(() => {
+    setFormData(modal.initial || {});
+  }, [modal]);
+
+  const updateField = (name, value) => setFormData((current) => ({ ...current, [name]: value }));
+  const submit = (event) => {
+    event.preventDefault();
+    modal.onSubmit(formData);
+    onClose();
+  };
+
+  return (
+    <div className="admin-modal" role="dialog" aria-modal="true" aria-label={modal.title} onMouseDown={onClose}>
+      <form className="admin-modal-panel" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
+        <header className="admin-modal-head">
+          <strong>{modal.title}</strong>
+          <button type="button" aria-label="关闭" onClick={onClose}><X size={22} /></button>
+        </header>
+        <div className="admin-modal-body">
+          {modal.fields.map((field) => (
+            field.type === "image" ? (
+              <div className="admin-image-editor" key={field.name}>
+                <span className="admin-field-title">{field.label}</span>
+                {hasText(formData[field.name]) ? (
+                  <img src={formData[field.name]} alt="" />
+                ) : (
+                  <div className="admin-empty-image">未上传图片</div>
+                )}
+                <TextInput label={`${field.label}地址`} value={formData[field.name]} onChange={(value) => updateField(field.name, value)} />
+                <div className="admin-row-actions">
+                  <UploadBox onUpload={(file) => uploadImage((url) => updateField(field.name, url), file)} />
+                  {hasText(formData[field.name]) ? <button type="button" className="admin-muted-button" onClick={() => updateField(field.name, "")}>移除图片</button> : null}
+                </div>
+              </div>
+            ) : (
+              <TextInput
+                key={field.name}
+                label={field.label}
+                value={formData[field.name]}
+                multiline={field.type === "textarea"}
+                rows={field.rows || 4}
+                onChange={(value) => updateField(field.name, value)}
+              />
+            )
+          ))}
+        </div>
+        <footer className="admin-modal-actions">
+          <button type="button" className="admin-muted-button" onClick={onClose}>取消</button>
+          <button type="submit"><Save size={16} />保存上线</button>
+        </footer>
+      </form>
+    </div>
   );
 }
 

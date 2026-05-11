@@ -562,10 +562,10 @@ svg {
 
 .people-card {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  grid-template-columns: clamp(54px, 6vw, 86px) minmax(0, 1fr);
+  gap: 8px 10px;
   align-content: start;
-  justify-items: start;
+  align-items: start;
   min-height: 0;
   border: 1px solid var(--line);
   padding: clamp(10px, 1.2vw, 16px);
@@ -586,7 +586,8 @@ svg {
 }
 
 .people-card figure {
-  width: min(88px, 100%);
+  grid-row: 1 / span 2;
+  width: 100%;
   aspect-ratio: 3 / 4;
   margin: 0;
   overflow: hidden;
@@ -607,6 +608,7 @@ svg {
 }
 
 .people-card h2 {
+  grid-column: 2;
   margin: 4px 0 0;
   font-size: clamp(0.98rem, 1.15vw, 1.35rem);
   line-height: 1.18;
@@ -614,6 +616,7 @@ svg {
 }
 
 .people-card h3 {
+  grid-column: 2;
   margin: 0;
   color: rgba(255, 255, 255, 0.72);
   font-size: clamp(0.72rem, 0.82vw, 0.9rem);
@@ -622,6 +625,7 @@ svg {
 }
 
 .people-card p {
+  grid-column: 2;
   margin: 0;
   color: rgba(255, 255, 255, 0.66);
   font-size: clamp(0.72rem, 0.8vw, 0.88rem);
@@ -1490,6 +1494,282 @@ svg {
   background: #050505;
 }
 
+.admin-preview-screen {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    #050505;
+  background-size: 48px 48px;
+}
+
+.admin-floating-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 150;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px clamp(18px, 4vw, 52px);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.admin-floating-toolbar strong {
+  display: block;
+  margin-top: 2px;
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+}
+
+.admin-floating-toolbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-floating-toolbar nav a,
+.admin-section-tools button,
+.admin-board-preview .main-title button,
+.admin-muted-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid var(--soft-line);
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-floating-toolbar nav a:hover,
+.admin-section-tools button:hover,
+.admin-board-preview .main-title button:hover,
+.admin-muted-button:hover {
+  border-color: var(--primary-2);
+  color: #fff;
+}
+
+.admin-page-section {
+  scroll-margin-top: 118px;
+  border-top: 1px solid var(--line);
+  padding-top: clamp(60px, 8vw, 120px);
+}
+
+.admin-page-section:first-of-type {
+  border-top: 0;
+}
+
+.home-admin-copy {
+  display: grid;
+  gap: 18px;
+  max-width: 980px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: clamp(24px, 4vw, 54px);
+}
+
+.home-admin-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(1.05rem, 1.3vw, 1.35rem);
+  font-weight: 700;
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
+.admin-editable {
+  position: relative;
+  outline: 1px dashed rgba(158, 203, 255, 0.22);
+  outline-offset: 6px;
+}
+
+.admin-editable:hover {
+  outline-color: rgba(158, 203, 255, 0.68);
+}
+
+.admin-inline-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  opacity: 0.2;
+  transition: opacity 0.2s ease;
+}
+
+.admin-editable:hover > .admin-inline-controls,
+.admin-inline-controls:focus-within {
+  opacity: 1;
+}
+
+.admin-inline-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  padding: 0 8px;
+  background: #fff;
+  color: #000;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-inline-controls button:hover {
+  background: var(--primary-2);
+}
+
+.admin-section-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.admin-section-tools .professor-label {
+  margin-bottom: 0;
+}
+
+.admin-board-preview {
+  margin-bottom: clamp(54px, 7vw, 92px);
+}
+
+.admin-board-preview .main-title {
+  align-items: center;
+}
+
+.admin-board-preview .main-title h2 {
+  color: #fff;
+}
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 48px);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.admin-modal-panel {
+  width: min(920px, 100%);
+  max-height: min(860px, 92vh);
+  overflow: auto;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(rgba(5, 5, 5, 0.96), rgba(5, 5, 5, 0.96)),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+  color: #fff;
+}
+
+.admin-modal-head,
+.admin-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 18px clamp(18px, 3vw, 34px);
+  background: #000;
+}
+
+.admin-modal-head strong {
+  font-size: clamp(1.2rem, 1.8vw, 2rem);
+}
+
+.admin-modal-head button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+.admin-modal-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.admin-modal-body .admin-field:has(textarea),
+.admin-image-editor {
+  grid-column: 1 / -1;
+}
+
+.admin-image-editor {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--soft-line);
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.admin-field-title {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.admin-image-editor img,
+.admin-empty-image {
+  width: min(180px, 48vw);
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--soft-line);
+  object-fit: cover;
+}
+
+.admin-empty-image {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.44);
+  background: #101010;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.admin-modal-actions {
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.admin-modal-actions button[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid #fff;
+  padding: 0 16px;
+  background: #fff;
+  color: #000;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-modal-actions button[type="submit"]:hover {
+  background: var(--primary-2);
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -1708,6 +1988,23 @@ svg {
     grid-template-columns: 1fr;
   }
 
+  .admin-floating-toolbar {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .admin-floating-toolbar nav {
+    justify-content: flex-start;
+  }
+
+  .admin-modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-inline-controls {
+    opacity: 1;
+  }
+
   .admin-toolbar {
     display: grid;
     align-items: start;
@@ -1749,7 +2046,17 @@ svg {
   }
 
   .people-card {
+    grid-template-columns: 46px minmax(0, 1fr);
     padding: 8px;
+  }
+
+  .people-card h2 {
+    font-size: 0.88rem;
+  }
+
+  .people-card h3 {
+    font-size: 0.66rem;
+    line-height: 1.32;
   }
 
   .people-modal-field {
