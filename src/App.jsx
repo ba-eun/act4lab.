@@ -304,7 +304,7 @@ function AttachmentIcon({ attachment, size = 28 }) {
   return <FileText size={size} />;
 }
 
-function AttachmentPreview({ value, className = "" }) {
+function AttachmentPreview({ value, className = "", interactive = true }) {
   const attachment = normalizeAttachment(value);
   if (!attachment || !hasMedia(attachment)) return null;
   const previewable = isPreviewableAttachment(attachment);
@@ -313,6 +313,13 @@ function AttachmentPreview({ value, className = "" }) {
     : { download: attachment.name };
 
   if (isImageAttachment(attachment)) {
+    if (!interactive) {
+      return (
+        <span className={`attachment-preview attachment-image ${className}`.trim()}>
+          <img src={attachment.url} alt={attachment.name} />
+        </span>
+      );
+    }
     return (
       <a className={`attachment-preview attachment-image ${className}`.trim()} href={attachment.url} {...openProps}>
         <img src={attachment.url} alt={attachment.name} />
@@ -321,6 +328,14 @@ function AttachmentPreview({ value, className = "" }) {
   }
 
   if (isVideoAttachment(attachment)) {
+    if (!interactive) {
+      return (
+        <div className={`attachment-preview attachment-video ${className}`.trim()}>
+          <video src={attachment.url} preload="metadata" muted playsInline />
+          <span>{attachment.name}</span>
+        </div>
+      );
+    }
     return (
       <div className={`attachment-preview attachment-video ${className}`.trim()}>
         <video src={attachment.url} controls preload="metadata" />
@@ -330,12 +345,30 @@ function AttachmentPreview({ value, className = "" }) {
   }
 
   if (isAudioAttachment(attachment)) {
+    if (!interactive) {
+      return (
+        <div className={`attachment-preview attachment-audio ${className}`.trim()}>
+          <Music size={24} />
+          <span>{attachment.name}</span>
+        </div>
+      );
+    }
     return (
       <div className={`attachment-preview attachment-audio ${className}`.trim()}>
         <Music size={24} />
         <audio src={attachment.url} controls preload="metadata" />
         <a href={attachment.url} {...openProps}>{attachment.name}</a>
       </div>
+    );
+  }
+
+  if (!interactive) {
+    return (
+      <span className={`attachment-preview attachment-file ${className}`.trim()}>
+        <AttachmentIcon attachment={attachment} />
+        <span>{attachment.name}</span>
+        <small>{[formatFileSize(attachment.size), attachment.type || "file"].filter(Boolean).join(" / ")}</small>
+      </span>
     );
   }
 
@@ -645,7 +678,7 @@ function HomePage() {
                   ) : null}
                   {hasMedia(item.image) ? (
                     <span className="thumb">
-                      <AttachmentPreview value={item.image} />
+                      <AttachmentPreview value={item.image} interactive={false} />
                     </span>
                   ) : editor.isEditing ? (
                     <span className="thumb admin-media-shell">
@@ -794,7 +827,7 @@ function PeoplePage() {
       {isEmpty ? <EmptyEntryPlaceholder label="空 People 条目" /> : null}
       {!isEmpty && hasMedia(person.photo) ? (
         <figure>
-          <AttachmentPreview value={person.photo} />
+          <AttachmentPreview value={person.photo} interactive={false} />
         </figure>
       ) : !isEmpty && editor.isEditing ? (
         <figure className="admin-media-shell">
@@ -923,7 +956,7 @@ function WorksPage() {
       {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : null}
       {!isEmpty && hasMedia(item.image) ? (
         <figure>
-          <AttachmentPreview value={item.image} />
+          <AttachmentPreview value={item.image} interactive={false} />
         </figure>
       ) : !isEmpty && editor.isEditing ? (
         <figure className="admin-media-shell">
