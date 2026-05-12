@@ -553,7 +553,10 @@ function PageShell({ title, children }) {
 function HomePage() {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
+  const news = indexedRenderableItems(getBoardItems(content, "news"), BOARD_LIST_FIELDS, editor.isEditing);
   const works = indexedRenderableItems(content.works || [], WORK_CONTENT_FIELDS, editor.isEditing);
+  const projects = indexedRenderableItems(getBoardItems(content, "project"), BOARD_LIST_FIELDS, editor.isEditing);
+  const publications = indexedRenderableItems(getBoardItems(content, "publications"), BOARD_LIST_FIELDS, editor.isEditing);
   useReveal();
   return (
     <main id="top" className="main">
@@ -597,7 +600,6 @@ function HomePage() {
       </AdminEditable>
 
       <div className="mb-latest container">
-        {false ? (
         <section className="news reveal-section">
           <MainTitle href="/board/news">News</MainTitle>
           <ul className="news-list">
@@ -620,7 +622,6 @@ function HomePage() {
             ))}
           </ul>
         </section>
-        ) : null}
 
         <section className="exhibition reveal-section">
           <MainTitle href="/works">Works</MainTitle>
@@ -660,7 +661,6 @@ function HomePage() {
           </a>
         </section>
 
-        {false ? (
         <section className="project reveal-section">
           <MainTitle href="/board/project">Project</MainTitle>
           <ul className="project-list">
@@ -681,7 +681,27 @@ function HomePage() {
             ))}
           </ul>
         </section>
-        ) : null}
+
+        <section className="project reveal-section">
+          <MainTitle href="/board/publications">Publications</MainTitle>
+          <ul className="project-list">
+            {publications.map(({ item, index, isEmpty }) => (
+              <AdminEditable
+                as="li"
+                className="reveal-item"
+                empty={isEmpty}
+                key={item.id || item.title || `publication-${index}`}
+                onEdit={() => editor.openBoardEditor("research", item, index)}
+                onAdd={() => editor.openBoardEditor("research")}
+                onDelete={() => editor.removeBoardItem("research", index)}
+              >
+                {isEmpty ? <EmptyEntryPlaceholder label="Empty Publications item" /> : <a href={siteHref(`/board/publications/${item.id || makeId(item.title)}`)}>
+                  {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
+                </a>}
+              </AdminEditable>
+            ))}
+          </ul>
+        </section>
       </div>
     </main>
   );
