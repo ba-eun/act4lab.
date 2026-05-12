@@ -1207,16 +1207,20 @@ svg {
 }
 
 .project-list a {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: start;
+  column-gap: 16px;
   min-height: 138px;
+  position: relative;
 }
 
 .project-list .subj {
   display: block;
-  position: relative;
+  grid-column: 1;
+  grid-row: 1;
   width: 100%;
   overflow: hidden;
-  padding-right: 52px;
   padding-bottom: 4rem;
   font-size: clamp(1.35rem, 1.8vw, 2.1rem);
   font-weight: 800;
@@ -1224,21 +1228,37 @@ svg {
   white-space: pre-line;
 }
 
-.project-list .subj::after {
-  position: absolute;
-  top: 10px;
-  right: 0;
-  width: 28px;
-  height: 16px;
+.project-list a::before,
+.project-list a::after {
   content: "";
-  background:
-    linear-gradient(#fff, #fff) 0 7px / 25px 2px no-repeat,
-    linear-gradient(45deg, transparent 48%, #fff 50% 56%, transparent 58%) right 1px top 0 / 16px 16px no-repeat;
   transition: transform 0.25s ease;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
 }
 
-.project-list a:hover .subj::after {
+.project-list a::before {
+  width: 30px;
+  height: 2px;
+  margin-top: 0.58em;
+  background: #fff;
+}
+
+.project-list a::after {
+  width: 11px;
+  height: 11px;
+  margin-top: 0.31em;
+  border-top: 2px solid #fff;
+  border-right: 2px solid #fff;
+  transform: rotate(45deg);
+}
+
+.project-list a:hover::before {
   transform: translateX(6px);
+}
+
+.project-list a:hover::after {
+  transform: translateX(6px) rotate(45deg);
 }
 
 .archive-list {
