@@ -240,13 +240,25 @@ function sortableProps(active, index, onMove) {
     onDragStart: (event) => {
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", String(index));
+      event.currentTarget.classList.add("is-dragging");
+    },
+    onDragEnd: (event) => {
+      event.currentTarget.classList.remove("is-dragging");
+      document.querySelectorAll(".is-drag-over").forEach((node) => node.classList.remove("is-drag-over"));
     },
     onDragOver: (event) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
     },
+    onDragEnter: (event) => {
+      event.currentTarget.classList.add("is-drag-over");
+    },
+    onDragLeave: (event) => {
+      event.currentTarget.classList.remove("is-drag-over");
+    },
     onDrop: (event) => {
       event.preventDefault();
+      event.currentTarget.classList.remove("is-drag-over");
       const fromIndex = Number(event.dataTransfer.getData("text/plain"));
       if (Number.isInteger(fromIndex)) onMove(fromIndex, index);
     },
@@ -365,7 +377,7 @@ function AttachmentIcon({ attachment, size = 28 }) {
   return <FileText size={size} />;
 }
 
-function AttachmentPreview({ value, className = "", interactive = true }) {
+function AttachmentPreview({ value, className = "", interactive = true, showName = true }) {
   const attachment = normalizeAttachment(value);
   if (!attachment || !hasMedia(attachment)) return null;
   const previewable = isPreviewableAttachment(attachment);
@@ -393,14 +405,14 @@ function AttachmentPreview({ value, className = "", interactive = true }) {
       return (
         <div className={`attachment-preview attachment-video ${className}`.trim()}>
           <video src={attachment.url} preload="metadata" muted playsInline />
-          <span>{attachment.name}</span>
+          {showName ? <span>{attachment.name}</span> : null}
         </div>
       );
     }
     return (
       <div className={`attachment-preview attachment-video ${className}`.trim()}>
         <video src={attachment.url} controls preload="metadata" />
-        <a href={attachment.url} {...openProps}>{attachment.name}</a>
+        {showName ? <a href={attachment.url} {...openProps}>{attachment.name}</a> : null}
       </div>
     );
   }
@@ -410,7 +422,7 @@ function AttachmentPreview({ value, className = "", interactive = true }) {
       return (
         <div className={`attachment-preview attachment-audio ${className}`.trim()}>
           <Music size={24} />
-          <span>{attachment.name}</span>
+          {showName ? <span>{attachment.name}</span> : null}
         </div>
       );
     }
@@ -418,7 +430,7 @@ function AttachmentPreview({ value, className = "", interactive = true }) {
       <div className={`attachment-preview attachment-audio ${className}`.trim()}>
         <Music size={24} />
         <audio src={attachment.url} controls preload="metadata" />
-        <a href={attachment.url} {...openProps}>{attachment.name}</a>
+        {showName ? <a href={attachment.url} {...openProps}>{attachment.name}</a> : null}
       </div>
     );
   }
@@ -427,8 +439,8 @@ function AttachmentPreview({ value, className = "", interactive = true }) {
     return (
       <span className={`attachment-preview attachment-file ${className}`.trim()}>
         <AttachmentIcon attachment={attachment} />
-        <span>{attachment.name}</span>
-        <small>{[formatFileSize(attachment.size), attachment.type || "file"].filter(Boolean).join(" / ")}</small>
+        {showName ? <span>{attachment.name}</span> : null}
+        {showName ? <small>{[formatFileSize(attachment.size), attachment.type || "file"].filter(Boolean).join(" / ")}</small> : null}
       </span>
     );
   }
@@ -436,13 +448,13 @@ function AttachmentPreview({ value, className = "", interactive = true }) {
   return (
     <a className={`attachment-preview attachment-file ${className}`.trim()} href={attachment.url} {...openProps}>
       <AttachmentIcon attachment={attachment} />
-      <span>{attachment.name}</span>
-      <small>{[formatFileSize(attachment.size), attachment.type || "file"].filter(Boolean).join(" / ")}</small>
+      {showName ? <span>{attachment.name}</span> : <span className="sr-only">Open attachment</span>}
+      {showName ? <small>{[formatFileSize(attachment.size), attachment.type || "file"].filter(Boolean).join(" / ")}</small> : null}
     </a>
   );
 }
 
-function AttachmentStack({ attachments = [], className = "", interactive = true }) {
+function AttachmentStack({ attachments = [], className = "", interactive = true, showName = true }) {
   const items = normalizeAttachmentList(attachments);
   if (!items.length) return null;
   return (
@@ -452,6 +464,7 @@ function AttachmentStack({ attachments = [], className = "", interactive = true 
           key={attachment.url}
           value={attachment}
           interactive={interactive}
+          showName={showName}
         />
       ))}
     </div>
@@ -1035,7 +1048,7 @@ function WorksPage() {
       {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : null}
       {!isEmpty && primaryAttachmentFor(item, "image") ? (
         <figure>
-          <AttachmentPreview value={primaryAttachmentFor(item, "image")} interactive={false} />
+          <AttachmentPreview value={primaryAttachmentFor(item, "image")} interactive={false} showName={false} />
         </figure>
       ) : !isEmpty && editor.isEditing ? (
         <figure className="admin-media-shell">
@@ -1086,11 +1099,11 @@ function WorksDetailPage({ id }) {
   return (
     <PageShell title={work.title || "Works"}>
       <DetailArticle image={work.image} attachments={attachmentsFor(work, "image")} fields={[
-        ["时间", work.date],
-        ["人员", work.people],
-        ["介绍", work.text],
-        ["正文", work.body],
-      ]} editableProps={{
+        ["DATE", work.date],
+        ["PEOPLE", work.people],
+        ["INTRO", work.text],
+        ["TEXT", work.body],
+      ]} showAttachmentNames={false} editableProps={{
         onEdit: () => editor.openWorkEditor(work, workIndex),
         onAdd: () => editor.openWorkEditor(),
         onDelete: () => editor.removeWork(workIndex, () => { window.location.href = siteHref("/works"); }),
@@ -1207,10 +1220,10 @@ function BoardDetailPage({ section, id }) {
   return (
     <PageShell title={item.title || meta.title}>
       <DetailArticle image={item.image} attachments={attachmentsFor(item, "image")} fields={[
-        ["时间", item.date],
-        ["人员", item.people],
-        ["介绍", item.intro],
-        ["正文", item.body],
+        ["DATE", item.date],
+        ["PEOPLE", item.people],
+        ["INTRO", item.intro],
+        ["TEXT", item.body],
       ]} editableProps={{
         onEdit: () => editor.openBoardEditor(meta.dataKey, item, itemIndex),
         onAdd: () => editor.openBoardEditor(meta.dataKey),
@@ -1220,7 +1233,7 @@ function BoardDetailPage({ section, id }) {
   );
 }
 
-function DetailArticle({ image, attachments = null, fields, className = "detail-page reveal-section", editableProps = {} }) {
+function DetailArticle({ image, attachments = null, fields, className = "detail-page reveal-section", editableProps = {}, showAttachmentNames = true }) {
   const { authenticated, editMode } = useAdminSession();
   const showEmptyPlaceholders = authenticated && editMode && isAdminRoute();
   const visibleFields = fields.filter(([, value]) => hasText(value));
@@ -1229,7 +1242,7 @@ function DetailArticle({ image, attachments = null, fields, className = "detail-
     <AdminEditable as="article" className={className} {...editableProps}>
       {mediaItems.length ? (
         <figure className="detail-hero reveal-item">
-          <AttachmentStack attachments={mediaItems} />
+          <AttachmentStack attachments={mediaItems} showName={showAttachmentNames} />
         </figure>
       ) : showEmptyPlaceholders ? (
         <figure className="detail-hero reveal-item admin-media-shell">
@@ -1702,7 +1715,7 @@ function useScopedContentEditor() {
             const people = current.people || [];
             return {
               ...current,
-              people: index === null ? [...people, nextItem] : people.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+              people: index === null ? [nextItem, ...people] : people.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
             };
           },
           { moduleKey: "people", action: index === null ? "create" : "update" },
@@ -1747,7 +1760,7 @@ function useScopedContentEditor() {
             const works = current.works || [];
             return {
               ...current,
-              works: index === null ? [...works, nextItem] : works.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+              works: index === null ? [nextItem, ...works] : works.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
             };
           },
           { moduleKey: "works", action: index === null ? "create" : "update" },
@@ -1794,7 +1807,7 @@ function useScopedContentEditor() {
               ...current,
               board: {
                 ...current.board,
-                [sectionKey]: index === null ? [...list, nextItem] : list.map((entry, itemIndex) => (itemIndex === index ? nextItem : entry)),
+                [sectionKey]: index === null ? [nextItem, ...list] : list.map((entry, itemIndex) => (itemIndex === index ? nextItem : entry)),
               },
             };
           },
@@ -2001,14 +2014,14 @@ function AdminPage() {
     }));
   };
 
-  const addListItem = (key, item) => setDraft((current) => ({ ...current, [key]: [...current[key], item] }));
+  const addListItem = (key, item) => setDraft((current) => ({ ...current, [key]: [item, ...current[key]] }));
   const removeListItem = (key, index) => setDraft((current) => ({ ...current, [key]: current[key].filter((_, itemIndex) => itemIndex !== index) }));
   const addBoardItem = (sectionKey) =>
     setDraft((current) => ({
       ...current,
       board: {
         ...current.board,
-        [sectionKey]: [...current.board[sectionKey], { id: `item-${Date.now()}`, title: "新条目", date: "", intro: "", people: "", image: "", attachments: [], body: "" }],
+        [sectionKey]: [{ id: `item-${Date.now()}`, title: "新条目", date: "", intro: "", people: "", image: "", attachments: [], body: "" }, ...current.board[sectionKey]],
       },
     }));
   const removeBoardItem = (sectionKey, index) =>
@@ -2203,7 +2216,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             ...current,
             people:
               index === null
-                ? [...(current.people || []), nextItem]
+                ? [nextItem, ...(current.people || [])]
                 : (current.people || []).map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
           };
         }),
@@ -2242,7 +2255,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             ...current,
             works:
               index === null
-                ? [...(current.works || []), nextItem]
+                ? [nextItem, ...(current.works || [])]
                 : (current.works || []).map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
           };
         }),
@@ -2282,7 +2295,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             ...current,
             board: {
               ...current.board,
-              [sectionKey]: index === null ? [...list, nextItem] : list.map((entry, itemIndex) => (itemIndex === index ? nextItem : entry)),
+              [sectionKey]: index === null ? [nextItem, ...list] : list.map((entry, itemIndex) => (itemIndex === index ? nextItem : entry)),
             },
           };
         }),

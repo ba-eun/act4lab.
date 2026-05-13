@@ -62,6 +62,15 @@ svg {
   display: block;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .container {
   box-sizing: border-box;
   width: 100%;
@@ -805,16 +814,29 @@ svg {
 
 .works-page {
   display: grid;
-  gap: 26px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(14px, 1.4vw, 24px);
 }
 
 .work-row {
   display: grid;
-  grid-template-columns: minmax(280px, 0.52fr) 1fr;
-  gap: clamp(28px, 5vw, 86px);
-  align-items: end;
-  border-bottom: 1px dotted rgba(255, 255, 255, 0.6);
-  padding-bottom: 26px;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  align-content: start;
+  min-height: 100%;
+  border: 1px solid var(--soft-line);
+  padding: clamp(12px, 1.1vw, 18px);
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    transform 0.25s ease;
+}
+
+.work-row:hover {
+  border-color: rgba(158, 203, 255, 0.7);
+  background: rgba(158, 203, 255, 0.045);
+  transform: translateY(-3px);
 }
 
 .work-row figure {
@@ -836,23 +858,26 @@ svg {
 }
 
 .work-row h2 {
-  margin: 16px 0 18px;
-  font-size: clamp(1.8rem, 3.1vw, 4.1rem);
-  line-height: 0.98;
+  margin: 10px 0 12px;
+  font-size: clamp(1.35rem, 1.8vw, 2.35rem);
+  line-height: 1.02;
   white-space: pre-line;
 }
 
 .work-row p {
-  max-width: 780px;
   margin: 0;
   color: rgba(255, 255, 255, 0.68);
-  font-size: clamp(1rem, 1.2vw, 1.25rem);
-  line-height: 1.85;
+  font-size: clamp(0.88rem, 0.9vw, 1rem);
+  line-height: 1.65;
   white-space: pre-line;
 }
 
 .board-page {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(14px, 1.4vw, 24px);
   border-top: 1px solid var(--line);
+  padding-top: 18px;
 }
 
 .board-hub {
@@ -901,14 +926,15 @@ svg {
 .board-head,
 .board-row {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 28px;
-  align-items: center;
-  border-bottom: 1px solid var(--soft-line);
-  padding: 22px 0;
+  gap: 18px;
+  align-items: start;
+  border: 1px solid var(--soft-line);
+  padding: clamp(18px, 2vw, 28px);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .board-head {
+  display: none;
   color: var(--primary-2);
   font-size: 0.86rem;
   font-weight: 900;
@@ -929,6 +955,11 @@ svg {
 
 .board-row-title:hover {
   color: var(--primary-2);
+}
+
+.board-row:hover {
+  border-color: rgba(158, 203, 255, 0.7);
+  background: rgba(158, 203, 255, 0.045);
 }
 
 .board-row span,
@@ -2041,6 +2072,21 @@ svg {
   cursor: grab;
 }
 
+[draggable="true"] {
+  will-change: transform, opacity;
+}
+
+.is-dragging {
+  opacity: 0.46;
+  transform: scale(0.985);
+}
+
+.is-drag-over {
+  outline: 2px solid rgba(158, 203, 255, 0.9);
+  outline-offset: 4px;
+  background: rgba(158, 203, 255, 0.07);
+}
+
 .admin-field-title {
   color: rgba(255, 255, 255, 0.66);
   font-size: 0.86rem;
@@ -2156,6 +2202,12 @@ svg {
     gap: 28px;
   }
 
+  .people-grid-page,
+  .works-page,
+  .board-page {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .exhibition-list {
     display: flex;
     overflow-x: auto;
@@ -2211,6 +2263,12 @@ svg {
     grid-template-columns: 1fr;
   }
 
+  .people-grid-page,
+  .works-page,
+  .board-page {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .slogan {
     display: grid;
     gap: 28px;
@@ -2262,7 +2320,6 @@ svg {
   }
 
   .cont-group,
-  .work-row,
   .contact-container .item {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -2286,17 +2343,6 @@ svg {
 
   .board-hub {
     grid-template-columns: 1fr;
-  }
-
-  .board-head {
-    display: none;
-  }
-
-  .board-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    align-items: start;
-    padding: 28px 0;
   }
 
   .detail-field {
@@ -2374,7 +2420,13 @@ svg {
   }
 
   .people-grid-page {
+    grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .works-page,
+  .board-page {
+    grid-template-columns: 1fr;
   }
 
   .people-card {
