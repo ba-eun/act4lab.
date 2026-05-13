@@ -316,13 +316,13 @@ function EmptyEntryPlaceholder({ label = "Empty item" }) {
   return (
     <div className="admin-empty-placeholder">
       <Plus size={18} />
-      <span>娣诲姞鍐呭</span>
+      <span>添加内容</span>
       <small>{label}</small>
     </div>
   );
 }
 
-function EmptyMediaPlaceholder({ label = "鐐瑰嚮涓婁紶闄勪欢" }) {
+function EmptyMediaPlaceholder({ label = "点击上传附件" }) {
   return (
     <div className="admin-empty-media">
       <Paperclip size={18} />
@@ -723,7 +723,7 @@ function HomePage() {
                 onAdd={() => editor.openBoardEditor("news")}
                 onDelete={() => editor.removeBoardItem("news", index)}
               >
-                {isEmpty ? <EmptyEntryPlaceholder label="绌?News 鏉＄洰" /> : <a href={siteHref(`/board/news/${item.id || makeId(item.title)}`)}>
+                {isEmpty ? <EmptyEntryPlaceholder label="空 News 条目" /> : <a href={siteHref(`/board/news/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
                   {hasText(item.intro || item.body) ? <span className="cont">{item.intro || item.body}</span> : null}
                   {hasText(item.date) ? <span className="date">{item.date}</span> : null}
@@ -746,7 +746,7 @@ function HomePage() {
                 onAdd={() => editor.openWorkEditor()}
                 onDelete={() => editor.removeWork(index)}
               >
-                {isEmpty ? <EmptyEntryPlaceholder label="绌?Works 鏉＄洰" /> : <a href={siteHref(`/works/${item.id || makeId(item.title)}`)}>
+                {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : <a href={siteHref(`/works/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) || hasText(item.date) ? (
                     <div className="item">
                       {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
@@ -767,7 +767,7 @@ function HomePage() {
             ))}
           </ul>
           <a className="more-btn" href={siteHref("/works")}>
-            鏌ョ湅鍏ㄩ儴浣滃搧 <ArrowRight size={22} />
+            查看全部作品 <ArrowRight size={22} />
           </a>
         </section>
 
@@ -784,7 +784,7 @@ function HomePage() {
                 onAdd={() => editor.openBoardEditor("projects")}
                 onDelete={() => editor.removeBoardItem("projects", index)}
               >
-                {isEmpty ? <EmptyEntryPlaceholder label="绌?Project 鏉＄洰" /> : <a href={siteHref(`/board/project/${item.id || makeId(item.title)}`)}>
+                {isEmpty ? <EmptyEntryPlaceholder label="空 Project 条目" /> : <a href={siteHref(`/board/project/${item.id || makeId(item.title)}`)}>
                   {hasText(item.title) ? <span className="subj">{item.title}</span> : null}
                 </a>}
               </AdminEditable>
@@ -846,7 +846,7 @@ function AboutPage() {
             onAdd={() => editor.openAboutSectionEditor()}
             onDelete={() => editor.removeAboutSection(index)}
           >
-            {isEmpty ? <EmptyEntryPlaceholder label="绌?About 鍐呭妯″潡" /> : (
+            {isEmpty ? <EmptyEntryPlaceholder label="空 About 内容模块" /> : (
               <>
                 {hasText(section.number) ? <p className="num reveal-item">{section.number}</p> : null}
                 {hasText(section.title) ? <p className="subj reveal-item">{section.title}</p> : null}
@@ -861,19 +861,19 @@ function AboutPage() {
         ))}
         <div className="object-band" aria-hidden="true">
           <span data-index="01">
-            <b>鍑濊/绉╁簭</b>
+            <b>凝视/秩序</b>
             <small>ACT I</small>
           </span>
           <span data-index="02">
-            <b>娴佸姩/鍙欎簨</b>
+            <b>流动/叙事</b>
             <small>ACT II</small>
           </span>
           <span data-index="03">
-            <b>瀵硅瘽/鍏辩敓</b>
+            <b>对话/共生</b>
             <small>ACT III</small>
           </span>
           <span data-index="04">
-            <b>鐮村/铻嶅悎</b>
+            <b>破壁/融合</b>
             <small>ACT IV</small>
           </span>
         </div>
@@ -886,7 +886,7 @@ function AboutPage() {
             onDelete={editor.clearArchive}
             addDisabledMessage={editor.singleItemMessage}
           >
-            {hasText(content.archive.at(-1)?.[1]) ? content.archive.at(-1)?.[1] : <EmptyEntryPlaceholder label="鐞嗗康鏂囨涓虹┖" />}
+            {hasText(content.archive.at(-1)?.[1]) ? content.archive.at(-1)?.[1] : <EmptyEntryPlaceholder label="理念文案为空" />}
           </AdminEditable>
         ) : null}
       </div>
@@ -901,7 +901,7 @@ function PeoplePage() {
   const [selectedPerson, setSelectedPerson] = useState(null);
   const renderPersonCard = (person, isEmpty) => (
     <>
-      {isEmpty ? <EmptyEntryPlaceholder label="绌?People 鏉＄洰" /> : null}
+      {isEmpty ? <EmptyEntryPlaceholder label="空 People 条目" /> : null}
       {!isEmpty && primaryAttachmentFor(person, "photo") ? (
         <figure>
           <AttachmentPreview value={primaryAttachmentFor(person, "photo")} interactive={false} />
@@ -1005,9 +1005,9 @@ function PeopleDetailPage({ id }) {
   const personIndex = findIndexById(content.people || [], id, "name");
   const fields = [
     ["Email", person.email],
-    ["鍏磋叮鏂瑰悜", person.interests],
-    ["缁忓巻", person.history],
-    ["缁忛獙", person.experience],
+    ["兴趣方向", person.interests],
+    ["经历", person.history],
+    ["经验", person.experience],
   ].filter(([, value]) => hasText(value));
   return (
     <PageShell title={person.name || "People"}>
@@ -1032,7 +1032,7 @@ function WorksPage() {
   const works = indexedRenderableItems(content.works || [], WORK_CONTENT_FIELDS, editor.isEditing);
   const renderWorkRow = (item, isEmpty) => (
     <>
-      {isEmpty ? <EmptyEntryPlaceholder label="绌?Works 鏉＄洰" /> : null}
+      {isEmpty ? <EmptyEntryPlaceholder label="空 Works 条目" /> : null}
       {!isEmpty && primaryAttachmentFor(item, "image") ? (
         <figure>
           <AttachmentPreview value={primaryAttachmentFor(item, "image")} interactive={false} />
@@ -1086,10 +1086,10 @@ function WorksDetailPage({ id }) {
   return (
     <PageShell title={work.title || "Works"}>
       <DetailArticle image={work.image} attachments={attachmentsFor(work, "image")} fields={[
-        ["鏃堕棿", work.date],
-        ["浜哄憳", work.people],
-        ["浠嬬粛", work.text],
-        ["姝ｆ枃", work.body],
+        ["时间", work.date],
+        ["人员", work.people],
+        ["介绍", work.text],
+        ["正文", work.body],
       ]} editableProps={{
         onEdit: () => editor.openWorkEditor(work, workIndex),
         onAdd: () => editor.openWorkEditor(),
@@ -1145,7 +1145,7 @@ function BoardListPage({ section }) {
   const items = indexedRenderableItems(getBoardItems(content, canonicalSection), BOARD_LIST_FIELDS, editor.isEditing);
   const renderBoardRow = (item, isEmpty) => (
     <>
-      {isEmpty ? <EmptyEntryPlaceholder label={`绌?${meta.title} 鏉＄洰`} /> : (
+      {isEmpty ? <EmptyEntryPlaceholder label={`空 ${meta.title} 条目`} /> : (
         <>
           {hasText(item.date) ? <span>{item.date}</span> : null}
           {hasText(item.title) ? <strong>{item.title}</strong> : null}
@@ -1177,7 +1177,7 @@ function BoardListPage({ section }) {
             </AdminEditable>
           ) : (
             <article className="board-row reveal-item" key={item.id || item.title}>
-              {isEmpty ? <EmptyEntryPlaceholder label={`绌?${meta.title} 鏉＄洰`} /> : (
+              {isEmpty ? <EmptyEntryPlaceholder label={`空 ${meta.title} 条目`} /> : (
                 <>
                   {hasText(item.date) ? <span>{item.date}</span> : null}
                   {hasText(item.title) ? (
@@ -1207,10 +1207,10 @@ function BoardDetailPage({ section, id }) {
   return (
     <PageShell title={item.title || meta.title}>
       <DetailArticle image={item.image} attachments={attachmentsFor(item, "image")} fields={[
-        ["鏃堕棿", item.date],
-        ["浜哄憳", item.people],
-        ["浠嬬粛", item.intro],
-        ["姝ｆ枃", item.body],
+        ["时间", item.date],
+        ["人员", item.people],
+        ["介绍", item.intro],
+        ["正文", item.body],
       ]} editableProps={{
         onEdit: () => editor.openBoardEditor(meta.dataKey, item, itemIndex),
         onAdd: () => editor.openBoardEditor(meta.dataKey),
@@ -1246,7 +1246,7 @@ function DetailArticle({ image, attachments = null, fields, className = "detail-
           ))}
         </div>
       ) : showEmptyPlaceholders ? (
-        <EmptyEntryPlaceholder label="璇︽儏鍐呭涓虹┖" />
+        <EmptyEntryPlaceholder label="详情内容为空" />
       ) : null}
     </AdminEditable>
   );
@@ -1256,9 +1256,9 @@ function ContactPage() {
   const content = useSiteContent();
   const editor = useScopedContentEditor();
   const fields = [
-    ["鍦板潃", content.site.contactAddress],
-    ["閭", content.site.contactEmail],
-    ["鏂瑰悜", content.site.contactDirections],
+    ["地址", content.site.contactAddress],
+    ["邮箱", content.site.contactEmail],
+    ["方向", content.site.contactDirections],
   ].filter(([, value]) => hasText(value));
   return (
     <PageShell title="Contact">
@@ -1275,7 +1275,7 @@ function ContactPage() {
             <span className="label">{label}</span>
             <p className="address">{value}</p>
           </div>
-        )) : editor.isEditing ? <EmptyEntryPlaceholder label="鑱旂郴淇℃伅涓虹┖" /> : null}
+        )) : editor.isEditing ? <EmptyEntryPlaceholder label="联系信息为空" /> : null}
       </AdminEditable>
     </PageShell>
   );
@@ -1311,7 +1311,7 @@ function UploadBox({ onUpload, multiple = true }) {
   return (
     <label className="upload-box">
       <Paperclip size={18} />
-      <span>涓婁紶闄勪欢</span>
+      <span>上传附件</span>
       <input
         type="file"
         multiple={multiple}
@@ -1470,7 +1470,7 @@ function AdminModeToggle() {
     <aside className="front-admin-toolbar" aria-label="Front admin controls">
       <button type="button" className={editMode ? "active" : ""} onClick={() => setEditMode(!editMode)}>
         {editMode ? <Pencil size={15} /> : <Eye size={15} />}
-        {editMode ? "缂栬緫妯″紡" : "棰勮妯″紡"}
+        {editMode ? "编辑模式" : "预览模式"}
       </button>
       <button type="button" onClick={logout}>
         <LogOut size={15} />
@@ -1535,7 +1535,7 @@ function useScopedContentEditor() {
   const openSiteEditor = () => {
     const site = content.site || {};
     admin.openModal({
-      title: "缂栬緫鍩虹淇℃伅",
+      title: "编辑基础信息",
       initial: {
         topLine: site.topLine || "",
         logo: site.logo || "",
@@ -1545,12 +1545,12 @@ function useScopedContentEditor() {
         footerTagline: site.footerTagline || "",
       },
       fields: [
-        { name: "topLine", label: "椤堕儴鏂囨" },
-        { name: "logo", label: "Logo 闄勪欢", type: "image" },
-        { name: "contactAddress", label: "鍦板潃", type: "textarea" },
-        { name: "contactEmail", label: "閭" },
-        { name: "contactDirections", label: "鏂瑰悜", type: "textarea" },
-        { name: "footerTagline", label: "椤佃剼璇存槑", type: "textarea" },
+        { name: "topLine", label: "顶部文案" },
+        { name: "logo", label: "Logo 附件", type: "image" },
+        { name: "contactAddress", label: "地址", type: "textarea" },
+        { name: "contactEmail", label: "邮箱" },
+        { name: "contactDirections", label: "方向", type: "textarea" },
+        { name: "footerTagline", label: "页脚说明", type: "textarea" },
       ],
       onSubmit: (values) =>
         commit((current) => ({ ...current, site: { ...current.site, ...values } }), {
@@ -1575,7 +1575,7 @@ function useScopedContentEditor() {
 
   const clearHomeIntro = () =>
     confirmDelete(
-      "纭娓呯┖棣栭〉绠€浠嬶紵",
+      "确认清空首页简介？",
       (current) => ({ ...current, homeIntro: [] }),
       { moduleKey: "homeIntro" },
     );
@@ -1583,11 +1583,11 @@ function useScopedContentEditor() {
   const openAboutHeadingEditor = () => {
     const about = content.about || {};
     admin.openModal({
-      title: "缂栬緫 About 鏍囬",
+      title: "编辑 About 标题",
       initial: { label: about.label || "", title: about.title || "" },
       fields: [
-        { name: "label", label: "鏍囩" },
-        { name: "title", label: "鏍囬" },
+        { name: "label", label: "标签" },
+        { name: "title", label: "标题" },
       ],
       onSubmit: (values) =>
         commit((current) => ({ ...current, about: { ...current.about, ...values } }), {
@@ -1599,16 +1599,16 @@ function useScopedContentEditor() {
 
   const openAboutSectionEditor = (section = {}, index = null) => {
     admin.openModal({
-      title: index === null ? "澧炲姞 About 鍐呭" : "缂栬緫 About 鍐呭",
+      title: index === null ? "增加 About 内容" : "编辑 About 内容",
       initial: {
         number: section.number || "",
         title: section.title || "",
         paragraphs: (section.paragraphs || []).join("\n\n"),
       },
       fields: [
-        { name: "number", label: "缂栧彿" },
-        { name: "title", label: "鏍囬" },
-        { name: "paragraphs", label: "姝ｆ枃", type: "textarea", rows: 8 },
+        { name: "number", label: "编号" },
+        { name: "title", label: "标题" },
+        { name: "paragraphs", label: "正文", type: "textarea", rows: 8 },
       ],
       onSubmit: (values) =>
         commit(
@@ -1652,11 +1652,11 @@ function useScopedContentEditor() {
   const openArchiveEditor = () => {
     const latest = content.archive?.at(-1) || ["Archive", ""];
     admin.openModal({
-      title: "缂栬緫鐞嗗康鏂囨",
+      title: "编辑理念文案",
       initial: { label: latest[0] || "", text: latest[1] || "" },
       fields: [
-        { name: "label", label: "鍐呴儴鏍囩" },
-        { name: "text", label: "鏄剧ず鏂囨", type: "textarea" },
+        { name: "label", label: "内部标签" },
+        { name: "text", label: "显示文案", type: "textarea" },
       ],
       onSubmit: (values) =>
         commit((current) => ({ ...current, archive: [[values.label || "Archive", values.text || ""]] }), {
@@ -1675,16 +1675,16 @@ function useScopedContentEditor() {
 
   const peopleFields = [
     { name: "attachments", legacyField: "photo", label: "附件", type: "attachments" },
-    { name: "name", label: "濮撳悕" },
-    { name: "email", label: "閭" },
-    { name: "interests", label: "鐮旂┒鏂瑰悜", type: "textarea" },
-    { name: "history", label: "缁忓巻", type: "textarea" },
-    { name: "experience", label: "缁忛獙", type: "textarea" },
+    { name: "name", label: "姓名" },
+    { name: "email", label: "邮箱" },
+    { name: "interests", label: "研究方向", type: "textarea" },
+    { name: "history", label: "经历", type: "textarea" },
+    { name: "experience", label: "经验", type: "textarea" },
   ];
 
   const openPersonEditor = (person = {}, index = null) => {
     admin.openModal({
-      title: index === null ? "澧炲姞 People 鏉＄洰" : "缂栬緫 People 鏉＄洰",
+      title: index === null ? "增加 People 条目" : "编辑 People 条目",
       initial: {
         photo: person.photo || "",
         attachments: attachmentsFor(person, "photo"),
@@ -1720,16 +1720,16 @@ function useScopedContentEditor() {
 
   const workFields = [
     { name: "attachments", legacyField: "image", label: "附件", type: "attachments" },
-    { name: "title", label: "鏍囬" },
-    { name: "date", label: "鏃堕棿" },
-    { name: "people", label: "浜哄憳" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
+    { name: "people", label: "人员" },
     { name: "text", label: "简介", type: "textarea" },
-    { name: "body", label: "姝ｆ枃", type: "textarea", rows: 8 },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
   ];
 
   const openWorkEditor = (work = {}, index = null) => {
     admin.openModal({
-      title: index === null ? "澧炲姞 Works 鏉＄洰" : "缂栬緫 Works 鏉＄洰",
+      title: index === null ? "增加 Works 条目" : "编辑 Works 条目",
       initial: {
         image: work.image || "",
         attachments: attachmentsFor(work, "image"),
@@ -1765,16 +1765,16 @@ function useScopedContentEditor() {
 
   const boardFields = [
     { name: "attachments", legacyField: "image", label: "附件", type: "attachments" },
-    { name: "title", label: "鏍囬" },
-    { name: "date", label: "鏃堕棿" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
     { name: "people", label: "人员 / 作者" },
     { name: "intro", label: "简介", type: "textarea" },
-    { name: "body", label: "姝ｆ枃", type: "textarea", rows: 8 },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
   ];
 
   const openBoardEditor = (sectionKey, item = {}, index = null) => {
     admin.openModal({
-      title: `${index === null ? "澧炲姞" : "缂栬緫"} Board 鏉＄洰`,
+      title: `${index === null ? "增加" : "编辑"} Board 条目`,
       initial: {
         image: item.image || "",
         attachments: attachmentsFor(item, "image"),
@@ -2023,10 +2023,10 @@ function AdminPage() {
       <main className="admin-screen admin-login">
         <form onSubmit={login} className="admin-login-box">
           <span className="admin-kicker">ACT IV ADMIN</span>
-          <h1>鍚庡彴鐧诲綍</h1>
+          <h1>后台登录</h1>
           <TextInput label="用户名" value={form.username} onChange={(value) => setForm({ ...form, username: value })} />
-          <TextInput label="瀵嗙爜" value={form.password} type="password" onChange={(value) => setForm({ ...form, password: value })} />
-          <button type="submit">鐧诲綍</button>
+          <TextInput label="密码" value={form.password} type="password" onChange={(value) => setForm({ ...form, password: value })} />
+          <button type="submit">登录</button>
           {message ? <p className="admin-message">{message}</p> : null}
         </form>
       </main>
@@ -2056,7 +2056,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const openSiteEditor = () => {
     setModal({
-      title: "缂栬緫鍩虹淇℃伅",
+      title: "编辑基础信息",
       initial: {
         topLine: site.topLine || "",
         logo: site.logo || "",
@@ -2066,12 +2066,12 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
         footerTagline: site.footerTagline || "",
       },
       fields: [
-        { name: "topLine", label: "椤堕儴缁嗘潯鏂囨" },
-        { name: "logo", label: "Logo 闄勪欢鍦板潃", type: "image" },
-        { name: "contactAddress", label: "鍦板潃", type: "textarea" },
-        { name: "contactEmail", label: "閭" },
-        { name: "contactDirections", label: "鏂瑰悜", type: "textarea" },
-        { name: "footerTagline", label: "椤佃剼璇存槑", type: "textarea" },
+        { name: "topLine", label: "顶部细条文案" },
+        { name: "logo", label: "Logo 附件地址", type: "image" },
+        { name: "contactAddress", label: "地址", type: "textarea" },
+        { name: "contactEmail", label: "邮箱" },
+        { name: "contactDirections", label: "方向", type: "textarea" },
+        { name: "footerTagline", label: "页脚说明", type: "textarea" },
       ],
       onSubmit: (values) =>
         commitDraft((current) => ({
@@ -2083,9 +2083,9 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const openHomeEditor = () => {
     setModal({
-      title: "缂栬緫棣栭〉浠嬬粛",
+      title: "编辑首页介绍",
       initial: { homeIntro: (draft.homeIntro || []).join("\n\n") },
-      fields: [{ name: "homeIntro", label: "棣栭〉浠嬬粛", type: "textarea", rows: 8 }],
+      fields: [{ name: "homeIntro", label: "首页介绍", type: "textarea", rows: 8 }],
       onSubmit: (values) =>
         commitDraft((current) => ({
           ...current,
@@ -2096,11 +2096,11 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const openAboutHeadingEditor = () => {
     setModal({
-      title: "缂栬緫 About LAB 鏍囬",
+      title: "编辑 About LAB 标题",
       initial: { label: about.label || "", title: about.title || "" },
       fields: [
-        { name: "label", label: "鏍囩" },
-        { name: "title", label: "鏍囬" },
+        { name: "label", label: "标签" },
+        { name: "title", label: "标题" },
       ],
       onSubmit: (values) =>
         commitDraft((current) => ({
@@ -2112,16 +2112,16 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const openAboutSectionEditor = (section, index) => {
     setModal({
-      title: "缂栬緫 About LAB 鍐呭",
+      title: "编辑 About LAB 内容",
       initial: {
         number: section.number || "",
         title: section.title || "",
         paragraphs: (section.paragraphs || []).join("\n\n"),
       },
       fields: [
-        { name: "number", label: "缂栧彿" },
-        { name: "title", label: "鏍囬" },
-        { name: "paragraphs", label: "姝ｆ枃", type: "textarea", rows: 8 },
+        { name: "number", label: "编号" },
+        { name: "title", label: "标题" },
+        { name: "paragraphs", label: "正文", type: "textarea", rows: 8 },
       ],
       onSubmit: (values) =>
         commitDraft((current) => ({
@@ -2137,15 +2137,14 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
         })),
     });
   };
-
   const openArchiveEditor = () => {
     const latest = draft.archive?.at(-1) || ["研究室精神", ""];
     setModal({
       title: "编辑底部理念语",
       initial: { label: latest[0] || "", text: latest[1] || "" },
       fields: [
-        { name: "label", label: "鍐呴儴鏍囩" },
-        { name: "text", label: "鏄剧ず鏂囨", type: "textarea" },
+        { name: "label", label: "内部标签" },
+        { name: "text", label: "显示文案", type: "textarea" },
       ],
       onSubmit: (values) =>
         commitDraft((current) => ({
@@ -2157,32 +2156,32 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const peopleFields = [
     { name: "attachments", legacyField: "photo", label: "附件", type: "attachments" },
-    { name: "name", label: "濮撳悕" },
-    { name: "email", label: "閭" },
-    { name: "interests", label: "鍏磋叮鏂瑰悜", type: "textarea" },
-    { name: "history", label: "缁忓巻", type: "textarea" },
-    { name: "experience", label: "缁忛獙", type: "textarea" },
+    { name: "name", label: "姓名" },
+    { name: "email", label: "邮箱" },
+    { name: "interests", label: "兴趣方向", type: "textarea" },
+    { name: "history", label: "经历", type: "textarea" },
+    { name: "experience", label: "经验", type: "textarea" },
   ];
   const workFields = [
     { name: "attachments", legacyField: "image", label: "附件", type: "attachments" },
-    { name: "title", label: "鏍囬" },
-    { name: "date", label: "鏃堕棿" },
-    { name: "people", label: "浜哄憳" },
-    { name: "text", label: "浠嬬粛", type: "textarea" },
-    { name: "body", label: "姝ｆ枃", type: "textarea", rows: 8 },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
+    { name: "people", label: "人员" },
+    { name: "text", label: "介绍", type: "textarea" },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
   ];
   const boardFields = [
     { name: "attachments", legacyField: "image", label: "附件", type: "attachments" },
-    { name: "title", label: "鏍囬" },
-    { name: "date", label: "鏃堕棿" },
+    { name: "title", label: "标题" },
+    { name: "date", label: "时间" },
     { name: "people", label: "人员 / 作者" },
-    { name: "intro", label: "浠嬬粛", type: "textarea" },
-    { name: "body", label: "姝ｆ枃", type: "textarea", rows: 8 },
+    { name: "intro", label: "介绍", type: "textarea" },
+    { name: "body", label: "正文", type: "textarea", rows: 8 },
   ];
 
   const openPersonEditor = (person = {}, index = null) => {
     setModal({
-      title: index === null ? "澧炲姞 People 鏉＄洰" : "缂栬緫 People 鏉＄洰",
+      title: index === null ? "增加 People 条目" : "编辑 People 条目",
       initial: {
         photo: person.photo || "",
         attachments: attachmentsFor(person, "photo"),
@@ -2221,7 +2220,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const openWorkEditor = (work = {}, index = null) => {
     setModal({
-      title: index === null ? "澧炲姞 Works 鏉＄洰" : "缂栬緫 Works 鏉＄洰",
+      title: index === null ? "增加 Works 条目" : "编辑 Works 条目",
       initial: {
         image: work.image || "",
         attachments: attachmentsFor(work, "image"),
@@ -2260,7 +2259,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
 
   const openBoardEditor = (sectionKey, item = {}, index = null) => {
     setModal({
-      title: `${index === null ? "澧炲姞" : "缂栬緫"} Board 鏉＄洰`,
+      title: `${index === null ? "增加" : "编辑"} Board 条目`,
       initial: {
         image: item.image || "",
         attachments: attachmentsFor(item, "image"),
@@ -2308,9 +2307,9 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => hasAnyValue(item, WORK_CONTENT_FIELDS));
   const contactFields = [
-    ["鍦板潃", site.contactAddress],
-    ["閭", site.contactEmail],
-    ["鏂瑰悜", site.contactDirections],
+    ["地址", site.contactAddress],
+    ["邮箱", site.contactEmail],
+    ["方向", site.contactDirections],
   ].filter(([, value]) => hasText(value));
 
   return (
@@ -2321,7 +2320,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             <span className="admin-kicker">ACT IV CMS</span>
             <strong>可视化后台管理</strong>
           </div>
-          <nav aria-label="鍚庡彴椤甸潰瀵艰埅">
+          <nav aria-label="后台页面导航">
             <a href="#admin-home">Home</a>
             <a href="#admin-about">About</a>
             <a href="#admin-people">People</a>
@@ -2330,7 +2329,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             <a href="#admin-contact">Contact</a>
           </nav>
           <div className="admin-actions">
-            <button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}淇濆瓨涓婄嚎</button>
+            <button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />}保存上线</button>
             <button type="button" onClick={logout}><LogOut size={18} />退出</button>
           </div>
         </div>
@@ -2373,10 +2372,10 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
               ))}
               <div className="object-band reveal-item admin-editable">
                 <AdminInlineControls onEdit={openArchiveEditor} />
-                <span data-index="01"><b>鍑濊/绉╁簭</b><small>ACT I</small></span>
-                <span data-index="02"><b>娴佸姩/鍙欎簨</b><small>ACT II</small></span>
-                <span data-index="03"><b>瀵硅瘽/鍏辩敓</b><small>ACT III</small></span>
-                <span data-index="04"><b>鐮村/铻嶅悎</b><small>ACT IV</small></span>
+                <span data-index="01"><b>凝视/秩序</b><small>ACT I</small></span>
+                <span data-index="02"><b>流动/叙事</b><small>ACT II</small></span>
+                <span data-index="03"><b>对话/共生</b><small>ACT III</small></span>
+                <span data-index="04"><b>破壁/融合</b><small>ACT IV</small></span>
               </div>
               {hasText(draft.archive?.at(-1)?.[1]) ? <p className="about-note reveal-item admin-editable"><AdminInlineControls onEdit={openArchiveEditor} />{draft.archive.at(-1)?.[1]}</p> : null}
             </div>
@@ -2391,7 +2390,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             </div>
             <div className="admin-section-tools">
               <span className="professor-label">PEOPLE</span>
-              <button type="button" onClick={() => openPersonEditor()}><Plus size={16} />澧炲姞</button>
+              <button type="button" onClick={() => openPersonEditor()}><Plus size={16} />增加</button>
             </div>
             <div className="people-grid-page">
               {indexedPeople.map(({ item, index }) => (
@@ -2418,7 +2417,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
             </div>
             <div className="admin-section-tools">
               <span className="professor-label">WORKS</span>
-              <button type="button" onClick={() => openWorkEditor()}><Plus size={16} />澧炲姞</button>
+              <button type="button" onClick={() => openWorkEditor()}><Plus size={16} />增加</button>
             </div>
             <div className="works-page reveal-section">
               {indexedWorks.map(({ item, index }) => (
@@ -2457,7 +2456,7 @@ function AdminVisualEditor({ draft, setDraft, save, persistContent, saving, logo
                 <div className="board-page admin-board-preview" key={sectionKey}>
                   <div className="main-title">
                     <h2>{meta.title}</h2>
-                    <button type="button" onClick={() => openBoardEditor(listKey)}><Plus size={16} />澧炲姞</button>
+                    <button type="button" onClick={() => openBoardEditor(listKey)}><Plus size={16} />增加</button>
                   </div>
                   <div className="board-head reveal-item">
                     <span>DATE</span>
@@ -2515,28 +2514,28 @@ function AdminInlineControls({ onEdit, onAdd, onDelete, addDisabledMessage, dele
   };
 
   return (
-    <div className="admin-inline-controls" aria-label="鍐呭绠＄悊鎸夐挳">
-      {onEdit ? <button type="button" title="缂栬緫" onClick={(event) => handleClick(event, onEdit)}><Pencil size={13} />缂栬緫</button> : null}
+    <div className="admin-inline-controls" aria-label="内容管理按钮">
+      {onEdit ? <button type="button" title="编辑" onClick={(event) => handleClick(event, onEdit)}><Pencil size={13} />编辑</button> : null}
       {onAdd || addDisabledMessage ? (
         <button
           type="button"
-          title={addDisabledMessage || "澧炲姞"}
+          title={addDisabledMessage || "增加"}
           aria-disabled={addDisabledMessage ? "true" : undefined}
           className={addDisabledMessage ? "is-disabled" : ""}
           onClick={(event) => handleClick(event, onAdd, addDisabledMessage)}
         >
-          <Plus size={13} />澧炲姞
+          <Plus size={13} />增加
         </button>
       ) : null}
       {onDelete || deleteDisabledMessage ? (
         <button
           type="button"
-          title={deleteDisabledMessage || "鍒犻櫎"}
+          title={deleteDisabledMessage || "删除"}
           aria-disabled={deleteDisabledMessage ? "true" : undefined}
           className={deleteDisabledMessage ? "is-disabled" : ""}
           onClick={(event) => handleClick(event, onDelete, deleteDisabledMessage)}
         >
-          <X size={13} />鍒犻櫎
+          <X size={13} />删除
         </button>
       ) : null}
     </div>
@@ -2602,7 +2601,7 @@ function AdminEditModal({ modal, onClose, uploadImage }) {
       <form className="admin-modal-panel" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
         <header className="admin-modal-head">
           <strong>{modal.title}</strong>
-          <button type="button" aria-label="鍏抽棴" onClick={onClose}><X size={22} /></button>
+          <button type="button" aria-label="关闭" onClick={onClose}><X size={22} /></button>
         </header>
         <div className="admin-modal-body">
           {modal.fields.map((field) => (
@@ -2636,8 +2635,8 @@ function AdminEditModal({ modal, onClose, uploadImage }) {
           ))}
         </div>
         <footer className="admin-modal-actions">
-          <button type="button" className="admin-muted-button" onClick={onClose}>鍙栨秷</button>
-          <button type="submit"><Save size={16} />淇濆瓨涓婄嚎</button>
+          <button type="button" className="admin-muted-button" onClick={onClose}>取消</button>
+          <button type="submit"><Save size={16} />保存上线</button>
         </footer>
       </form>
     </div>
@@ -2661,15 +2660,15 @@ function BoardEditor({ draft, addBoardItem, removeBoardItem, updateBoardItem, up
                 <article className="admin-work-card" key={item.id || index}>
                   <figure>{hasMedia(item.image) ? <AttachmentPreview value={item.image} /> : null}</figure>
                   <div className="admin-work-form">
-                    <TextInput label="鏍囬" value={item.title} onChange={(value) => updateBoardItem(key, index, "title", value)} />
-                    <TextInput label="鏃堕棿" value={item.date} onChange={(value) => updateBoardItem(key, index, "date", value)} />
+                    <TextInput label="标题" value={item.title} onChange={(value) => updateBoardItem(key, index, "title", value)} />
+                    <TextInput label="时间" value={item.date} onChange={(value) => updateBoardItem(key, index, "date", value)} />
                     <TextInput label="人员 / 作者" value={item.people} onChange={(value) => updateBoardItem(key, index, "people", value)} />
-                    <TextInput label="浠嬬粛" value={item.intro} multiline onChange={(value) => updateBoardItem(key, index, "intro", value)} />
-                    <TextInput label="姝ｆ枃" value={item.body} multiline onChange={(value) => updateBoardItem(key, index, "body", value)} />
-                    <TextInput label="闄勪欢鍦板潃" value={attachmentUrl(item.image)} onChange={(value) => updateBoardItem(key, index, "image", value)} />
+                    <TextInput label="介绍" value={item.intro} multiline onChange={(value) => updateBoardItem(key, index, "intro", value)} />
+                    <TextInput label="正文" value={item.body} multiline onChange={(value) => updateBoardItem(key, index, "body", value)} />
+                    <TextInput label="附件地址" value={attachmentUrl(item.image)} onChange={(value) => updateBoardItem(key, index, "image", value)} />
                     <div className="admin-row-actions">
                       <UploadBox onUpload={(file) => uploadImage((url) => updateBoardItem(key, index, "image", url), file)} />
-                      <button type="button" className="admin-danger" onClick={() => removeBoardItem(key, index)}><Trash2 size={16} />鍒犻櫎</button>
+                      <button type="button" className="admin-danger" onClick={() => removeBoardItem(key, index)}><Trash2 size={16} />删除</button>
                     </div>
                   </div>
                 </article>
@@ -2694,15 +2693,15 @@ function PeopleEditor({ draft, updatePerson, removePerson, addPerson, uploadImag
           <article className="admin-work-card" key={person.id || index}>
             <figure>{hasMedia(person.photo) ? <AttachmentPreview value={person.photo} /> : null}</figure>
             <div className="admin-work-form">
-              <TextInput label="濮撳悕" value={person.name} onChange={(value) => updatePerson(index, "name", value)} />
-              <TextInput label="閭" value={person.email} onChange={(value) => updatePerson(index, "email", value)} />
-              <TextInput label="鍏磋叮鏂瑰悜" value={person.interests} multiline onChange={(value) => updatePerson(index, "interests", value)} />
-              <TextInput label="缁忓巻" value={person.history} multiline onChange={(value) => updatePerson(index, "history", value)} />
-              <TextInput label="缁忛獙" value={person.experience} multiline onChange={(value) => updatePerson(index, "experience", value)} />
-              <TextInput label="闄勪欢鍦板潃" value={attachmentUrl(person.photo)} onChange={(value) => updatePerson(index, "photo", value)} />
+              <TextInput label="姓名" value={person.name} onChange={(value) => updatePerson(index, "name", value)} />
+              <TextInput label="邮箱" value={person.email} onChange={(value) => updatePerson(index, "email", value)} />
+              <TextInput label="兴趣方向" value={person.interests} multiline onChange={(value) => updatePerson(index, "interests", value)} />
+              <TextInput label="经历" value={person.history} multiline onChange={(value) => updatePerson(index, "history", value)} />
+              <TextInput label="经验" value={person.experience} multiline onChange={(value) => updatePerson(index, "experience", value)} />
+              <TextInput label="附件地址" value={attachmentUrl(person.photo)} onChange={(value) => updatePerson(index, "photo", value)} />
               <div className="admin-row-actions">
                 <UploadBox onUpload={(file) => uploadImage((url) => updatePerson(index, "photo", url), file)} />
-                <button type="button" className="admin-danger" onClick={() => removePerson(index)}><Trash2 size={16} />鍒犻櫎</button>
+                <button type="button" className="admin-danger" onClick={() => removePerson(index)}><Trash2 size={16} />删除</button>
               </div>
             </div>
           </article>
@@ -2724,15 +2723,15 @@ function WorksEditor({ draft, updateWork, removeWork, addWork, uploadImage }) {
           <article className="admin-work-card" key={work.id || index}>
             <figure>{hasMedia(work.image) ? <AttachmentPreview value={work.image} /> : null}</figure>
             <div className="admin-work-form">
-              <TextInput label="鏍囬" value={work.title} onChange={(value) => updateWork(index, "title", value)} />
-              <TextInput label="鏃堕棿" value={work.date} onChange={(value) => updateWork(index, "date", value)} />
-              <TextInput label="浜哄憳" value={work.people} onChange={(value) => updateWork(index, "people", value)} />
-              <TextInput label="浠嬬粛" value={work.text} multiline onChange={(value) => updateWork(index, "text", value)} />
-              <TextInput label="姝ｆ枃" value={work.body} multiline onChange={(value) => updateWork(index, "body", value)} />
-              <TextInput label="闄勪欢鍦板潃" value={attachmentUrl(work.image)} onChange={(value) => updateWork(index, "image", value)} />
+              <TextInput label="标题" value={work.title} onChange={(value) => updateWork(index, "title", value)} />
+              <TextInput label="时间" value={work.date} onChange={(value) => updateWork(index, "date", value)} />
+              <TextInput label="人员" value={work.people} onChange={(value) => updateWork(index, "people", value)} />
+              <TextInput label="介绍" value={work.text} multiline onChange={(value) => updateWork(index, "text", value)} />
+              <TextInput label="正文" value={work.body} multiline onChange={(value) => updateWork(index, "body", value)} />
+              <TextInput label="附件地址" value={attachmentUrl(work.image)} onChange={(value) => updateWork(index, "image", value)} />
               <div className="admin-row-actions">
                 <UploadBox onUpload={(file) => uploadImage((url) => updateWork(index, "image", url), file)} />
-                <button type="button" className="admin-danger" onClick={() => removeWork(index)}><Trash2 size={16} />鍒犻櫎</button>
+                <button type="button" className="admin-danger" onClick={() => removeWork(index)}><Trash2 size={16} />删除</button>
               </div>
             </div>
           </article>
@@ -2850,7 +2849,7 @@ function AdminBreadcrumb({ path }) {
   const content = useSiteContent();
   const crumbs = getAdminCrumbs(path, content);
   return (
-    <nav className="admin-breadcrumb" aria-label="鍚庡彴褰撳墠浣嶇疆">
+    <nav className="admin-breadcrumb" aria-label="后台当前位置">
       <div className="container">
         {crumbs.map((crumb, index) => (
           <a href={crumb.href} aria-current={index === crumbs.length - 1 ? "page" : undefined} key={`${crumb.href}-${index}`}>
@@ -2877,7 +2876,7 @@ function AdminRouteFrame() {
       <CurrentPage pathOverride={frontPath} />
       <footer className="footer">
         <div className="container">
-          <p>COPYRIGHT 漏 2026 ACT IV FUTURE VISUAL LAB</p>
+          <p>COPYRIGHT © 2026 ACT IV FUTURE VISUAL LAB</p>
           <p>{content.site.footerTagline}</p>
           <a href="/admin"><ArrowUp size={18} />top</a>
         </div>
@@ -2896,7 +2895,7 @@ function SiteFrame() {
       <CurrentPage />
       <footer className="footer">
         <div className="container">
-          <p>COPYRIGHT 漏 2026 ACT IV FUTURE VISUAL LAB</p>
+          <p>COPYRIGHT © 2026 ACT IV FUTURE VISUAL LAB</p>
           <p>{content.site.footerTagline}</p>
           <a href="/"><ArrowUp size={18} />top</a>
         </div>
