@@ -1117,6 +1117,68 @@ svg {
   list-style: none;
 }
 
+.home-carousel {
+  position: relative;
+}
+
+.home-carousel-track.news-list,
+.home-carousel-track.exhibition-list,
+.home-carousel-track.project-list {
+  display: grid;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 60px) / 4);
+  gap: 20px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 1px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.home-carousel-track > * {
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.home-carousel-track.project-list li {
+  width: auto;
+}
+
+.home-carousel-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.home-carousel-controls button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.22s ease,
+    background 0.22s ease,
+    transform 0.22s ease;
+}
+
+.home-carousel-controls button:hover,
+.home-carousel-controls button:focus-visible {
+  border-color: var(--primary-2);
+  background: rgba(158, 203, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.home-carousel-controls .prev svg {
+  transform: rotate(180deg);
+}
+
 .news-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1216,10 +1278,10 @@ svg {
   width: 100%;
   aspect-ratio: 1 / 1.16;
   object-fit: cover;
-  filter: grayscale(1) brightness(0.58) contrast(1.1);
+  filter: brightness(0.96) contrast(1.04);
   transition:
-    transform 0.7s ease,
-    filter 0.7s ease;
+    transform 0.55s ease,
+    filter 0.55s ease;
 }
 
 .thumb .attachment-video,
@@ -1229,9 +1291,23 @@ svg {
   min-height: 0;
 }
 
-.exhibition-list a:hover img {
-  transform: scale(1.08);
-  filter: grayscale(0.25) brightness(0.86) contrast(1.02);
+.thumb .attachment-video {
+  overflow: hidden;
+  padding: 0;
+}
+
+.thumb .attachment-video video {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+}
+
+.exhibition-list a:hover img,
+.exhibition-list a:focus-visible img,
+.exhibition-list a:active img {
+  transform: scale(1.055);
+  filter: brightness(1.02) contrast(1.04);
 }
 
 .more-btn {
@@ -2202,6 +2278,12 @@ svg {
     gap: 28px;
   }
 
+  .home-carousel-track.news-list,
+  .home-carousel-track.exhibition-list,
+  .home-carousel-track.project-list {
+    grid-auto-columns: calc((100% - 40px) / 3);
+  }
+
   .people-grid-page,
   .works-page,
   .board-page {
@@ -2261,6 +2343,13 @@ svg {
   .lab-intro,
   .news-list {
     grid-template-columns: 1fr;
+  }
+
+  .home-carousel-track.news-list,
+  .home-carousel-track.exhibition-list,
+  .home-carousel-track.project-list {
+    grid-template-columns: none;
+    grid-auto-columns: calc((100% - 20px) / 2);
   }
 
   .people-grid-page,
@@ -2405,6 +2494,12 @@ svg {
 
   .head-top {
     font-size: 11px;
+  }
+
+  .home-carousel-track.news-list,
+  .home-carousel-track.exhibition-list,
+  .home-carousel-track.project-list {
+    grid-auto-columns: 100%;
   }
 
   .visual-wordmark span {

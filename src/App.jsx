@@ -637,6 +637,37 @@ function MainTitle({ children, href = "#" }) {
   );
 }
 
+function HomeCarousel({ className, itemCount = 0, children }) {
+  const trackRef = useRef(null);
+  const canScroll = itemCount > 4;
+  const scroll = (direction) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollBy({
+      left: direction * track.clientWidth,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <div className={`home-carousel ${canScroll ? "" : "is-static"}`.trim()}>
+      <ul className={`${className} home-carousel-track`.trim()} ref={trackRef}>
+        {children}
+      </ul>
+      {canScroll ? (
+        <div className="home-carousel-controls" aria-label={`${className} slider controls`}>
+          <button type="button" className="prev" onClick={() => scroll(-1)} aria-label="Previous items">
+            <ArrowRight size={20} />
+          </button>
+          <button type="button" onClick={() => scroll(1)} aria-label="Next items">
+            <ArrowRight size={20} />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function useReveal() {
   const content = useSiteContent();
   useEffect(() => {
@@ -725,7 +756,7 @@ function HomePage() {
       <div className="mb-latest container">
         <section className="news reveal-section">
           <MainTitle href="/board/news">News</MainTitle>
-          <ul className="news-list">
+          <HomeCarousel className="news-list" itemCount={news.length}>
             {news.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
@@ -743,12 +774,12 @@ function HomePage() {
                 </a>}
               </AdminEditable>
             ))}
-          </ul>
+          </HomeCarousel>
         </section>
 
         <section className="exhibition reveal-section">
           <MainTitle href="/works">Works</MainTitle>
-          <ul className="exhibition-list">
+          <HomeCarousel className="exhibition-list" itemCount={works.length}>
             {works.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
@@ -768,7 +799,7 @@ function HomePage() {
                   ) : null}
                   {primaryAttachmentFor(item, "image") ? (
                     <span className="thumb">
-                      <AttachmentPreview value={primaryAttachmentFor(item, "image")} interactive={false} />
+                      <AttachmentPreview value={primaryAttachmentFor(item, "image")} interactive={false} showName={false} />
                     </span>
                   ) : editor.isEditing ? (
                     <span className="thumb admin-media-shell">
@@ -778,7 +809,7 @@ function HomePage() {
                 </a>}
               </AdminEditable>
             ))}
-          </ul>
+          </HomeCarousel>
           <a className="more-btn" href={siteHref("/works")}>
             查看全部作品 <ArrowRight size={22} />
           </a>
@@ -786,7 +817,7 @@ function HomePage() {
 
         <section className="project reveal-section">
           <MainTitle href="/board/project">Project</MainTitle>
-          <ul className="project-list">
+          <HomeCarousel className="project-list" itemCount={projects.length}>
             {projects.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
@@ -802,12 +833,12 @@ function HomePage() {
                 </a>}
               </AdminEditable>
             ))}
-          </ul>
+          </HomeCarousel>
         </section>
 
         <section className="project reveal-section">
           <MainTitle href="/board/publications">Publications</MainTitle>
-          <ul className="project-list">
+          <HomeCarousel className="project-list" itemCount={publications.length}>
             {publications.map(({ item, index, isEmpty }) => (
               <AdminEditable
                 as="li"
@@ -823,7 +854,7 @@ function HomePage() {
                 </a>}
               </AdminEditable>
             ))}
-          </ul>
+          </HomeCarousel>
         </section>
       </div>
     </main>
