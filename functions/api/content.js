@@ -12,6 +12,85 @@ function makeId(value = "item") {
     .slice(0, 80) || `item-${Date.now()}`;
 }
 
+function attachmentUrl(value) {
+  if (!value) return "";
+  if (Array.isArray(value)) return attachmentUrl(value.find((item) => attachmentUrl(item)));
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "object") return String(value.url || value.src || value.href || "").trim();
+  return "";
+}
+
+function fileNameFromUrl(url = "") {
+  const name = String(url).split(/[?#]/)[0].split("/").filter(Boolean).at(-1) || "attachment";
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}
+
+function inferMimeType(url = "") {
+  const ext = String(url).split(/[?#]/)[0].split(".").pop()?.toLowerCase() || "";
+  const map = {
+    avif: "image/avif",
+    gif: "image/gif",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    svg: "image/svg+xml",
+    webp: "image/webp",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    mov: "video/quicktime",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    ogg: "audio/ogg",
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    zip: "application/zip",
+  };
+  return map[ext] || "";
+}
+
+function normalizeAttachment(value) {
+  const url = attachmentUrl(value);
+  if (!url) return null;
+  const metadata = typeof value === "object" && value ? value : {};
+  return {
+    url,
+    name: metadata.name || metadata.originalName || fileNameFromUrl(url),
+    size: Number(metadata.size || 0),
+    type: metadata.type || metadata.mime || metadata.contentType || inferMimeType(url),
+    createdAt: metadata.createdAt || "",
+  };
+}
+
+function normalizeAttachmentList(...values) {
+  const seen = new Set();
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .map((value) => normalizeAttachment(value))
+    .filter(Boolean)
+    .filter((attachment) => {
+      if (seen.has(attachment.url)) return false;
+      seen.add(attachment.url);
+      return true;
+    });
+}
+
+function withAttachmentFields(source, legacyKey) {
+  const attachments = normalizeAttachmentList(source.attachments, source[legacyKey]);
+  return {
+    attachments,
+    [legacyKey]: attachments[0] || source[legacyKey] || "",
+  };
+}
+
 function normalizeBoardItem(item, fallback = {}) {
   const source = typeof item === "string" ? { title: item, intro: item } : item || {};
   const title = source.title || fallback.title || "Untitled";
@@ -21,7 +100,7 @@ function normalizeBoardItem(item, fallback = {}) {
     date: source.date || fallback.date || "",
     intro: source.intro || source.text || fallback.intro || "",
     people: source.people || fallback.people || "",
-    image: source.image || fallback.image || "",
+    ...withAttachmentFields({ ...fallback, ...source }, "image"),
     body: source.body || source.text || fallback.body || "",
   };
 }
@@ -34,7 +113,7 @@ function normalizeWork(item = {}) {
     date: item.date || "",
     text: item.text || item.intro || "",
     people: item.people || "",
-    image: item.image || "",
+    ...withAttachmentFields(item, "image"),
     body: item.body || item.text || item.intro || "",
   };
 }
@@ -44,6 +123,7 @@ function normalizePerson(item = {}) {
     return {
       id: makeId(item[0]),
       photo: "",
+      attachments: [],
       name: item[0] || "Untitled",
       email: "",
       interests: item[1] || "",
@@ -54,7 +134,7 @@ function normalizePerson(item = {}) {
   const name = item.name || item.title || "Untitled";
   return {
     id: item.id || makeId(name),
-    photo: item.photo || item.image || "",
+    ...withAttachmentFields({ ...item, photo: item.photo || item.image || "" }, "photo"),
     name,
     email: item.email || "",
     interests: item.interests || item.interest || item.text || "",
@@ -138,10 +218,16 @@ function collectUploadKeys(value, keys = new Set()) {
 }
 
 async function deleteUnreferencedUploads(env, before, after) {
-  if (!env.ACT4_CONTENT) return;
   const beforeKeys = collectUploadKeys(before);
   const afterKeys = collectUploadKeys(after);
-  await Promise.all([...beforeKeys].filter((key) => !afterKeys.has(key)).map((key) => env.ACT4_CONTENT.delete(`upload:${key}`)));
+  await Promise.all(
+    [...beforeKeys]
+      .filter((key) => !afterKeys.has(key))
+      .map(async (key) => {
+        await env.ACT4_ASSETS?.delete(key).catch(() => null);
+        await env.ACT4_CONTENT?.delete(`upload:${key}`).catch(() => null);
+      }),
+  );
 }
 
 export async function onRequestGet({ request, env }) {

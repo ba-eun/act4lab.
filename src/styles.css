@@ -614,6 +614,16 @@ svg {
 
 .attachment-image img {
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: inherit;
+  filter: inherit;
+}
+
+.attachment-stack {
+  display: grid;
+  gap: 14px;
+  width: 100%;
 }
 
 .attachment-video,
@@ -817,7 +827,7 @@ svg {
   width: 100%;
   aspect-ratio: 1.35 / 1;
   object-fit: cover;
-  filter: grayscale(1) brightness(0.62) contrast(1.1);
+  filter: brightness(0.96) contrast(1.04);
 }
 
 .work-row span {
@@ -944,14 +954,25 @@ svg {
 .detail-hero img {
   width: 100%;
   max-height: 72vh;
-  object-fit: cover;
-  filter: grayscale(1) brightness(0.64) contrast(1.12);
+  object-fit: contain;
+  filter: brightness(0.98) contrast(1.03);
 }
 
 .detail-hero .attachment-video,
 .detail-hero .attachment-audio,
 .detail-hero .attachment-file {
   min-height: min(460px, 58vh);
+}
+
+.detail-hero .attachment-image {
+  height: auto;
+  min-height: 0;
+  background: #090909;
+}
+
+.detail-hero .attachment-image img {
+  height: auto;
+  max-height: 72vh;
 }
 
 .people-detail .detail-hero {
@@ -1560,7 +1581,7 @@ svg {
 }
 
 .admin-work-card figure:empty::after {
-  content: "未上传图片";
+  content: "未上传附件";
   color: rgba(255, 255, 255, 0.38);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1569,7 +1590,7 @@ svg {
 .admin-work-card img {
   width: 100%;
   height: 180px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .admin-work-form {
@@ -1995,6 +2016,31 @@ svg {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.admin-attachment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-attachment-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--soft-line);
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.admin-drag-handle {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--soft-line);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: grab;
+}
+
 .admin-field-title {
   color: rgba(255, 255, 255, 0.66);
   font-size: 0.86rem;
@@ -2004,16 +2050,17 @@ svg {
 .admin-image-editor .attachment-preview,
 .admin-image-editor img,
 .admin-empty-image {
-  width: min(180px, 48vw);
-  aspect-ratio: 3 / 4;
+  width: 100%;
+  max-width: 420px;
+  min-height: 120px;
   border: 1px solid var(--soft-line);
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .admin-image-editor .attachment-video,
 .admin-image-editor .attachment-audio,
 .admin-image-editor .attachment-file {
-  min-height: 180px;
+  min-height: 140px;
 }
 
 .admin-empty-image {
