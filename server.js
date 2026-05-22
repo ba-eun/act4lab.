@@ -40,10 +40,10 @@ const DEFAULT_STACK_ATTACHMENT_WIDTH = 0.78;
 const DEFAULT_STACK_ATTACHMENT_HEIGHT = 0.5;
 const STACK_TEXT_ITEM_TYPE = "text";
 const MIN_STACK_ITEM_RATIO = 0.02;
-const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body"]);
+const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body", "introduction"]);
 
 function legacyContentFieldIdFromTextId(rawId, validFieldIds = null) {
-  const match = String(rawId || "").trim().match(/^legacy-(text|intro|body)(?:-\d+)?$/);
+  const match = String(rawId || "").trim().match(/^legacy-(text|intro|body|introduction)(?:-\d+)?$/);
   const fieldId = match?.[1] || "";
   if (!fieldId || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)) return "";
   if (validFieldIds && !validFieldIds.has(fieldId)) return "";
