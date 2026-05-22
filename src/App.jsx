@@ -2445,14 +2445,19 @@ function isLightboxVideoSeekPoint(target, event) {
   if (!seekTarget) return null;
   const { rect } = seekTarget;
   if (!rect.width || !rect.height) return false;
-  if (target.classList?.contains("video-lightbox-seek-layer")) {
-    const layerRect = target.getBoundingClientRect();
+  const isSeekLayer = target.classList?.contains("video-lightbox-seek-layer");
+  const host = target.closest?.(".video-lightbox-panel, .attachment-lightbox-stage, .attachment-lightbox-panel") || target;
+  const seekLayer = isSeekLayer ? target : host?.querySelector?.(".video-lightbox-seek-layer");
+  if (seekLayer) {
+    const layerRect = seekLayer.getBoundingClientRect();
     if (
       event.clientX >= layerRect.left
       && event.clientX <= layerRect.right
       && event.clientY >= layerRect.top
       && event.clientY <= layerRect.bottom
     ) return seekTarget;
+  }
+  if (isSeekLayer) {
     return null;
   }
   const yFromBottom = rect.bottom - event.clientY;
