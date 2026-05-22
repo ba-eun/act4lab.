@@ -4898,8 +4898,8 @@ function BlockEditorCanvas({
       bottom: edges.top ? startBottom : edges.bottom ? state.startItemY + nextH : centerY + (nextH / 2),
     });
   };
-  const lockAttachmentResizeAspectRect = (state, rect) => {
-    if (state.item.type !== "attachment" || !state.shiftKey || !state.resizeAspectRatio) return rect;
+  const lockFreeResizeAspectRect = (state, rect) => {
+    if (!state.shiftKey || !state.resizeAspectRatio) return rect;
     const { minWidth, minHeight, maxWidth, maxHeight } = freeResizeBounds(state.item, state.stageWidth);
     const edges = state.resizeEdges || resizeEdgesForHandle(state.resizeHandle);
     const ratio = state.resizeAspectRatio;
@@ -5000,9 +5000,9 @@ function BlockEditorCanvas({
     const nextPatch = state.mode === "resize"
       ? (() => {
           const rawRect = freeResizeRectFromDelta(state, deltaX, deltaY);
-          const lockedRect = lockAttachmentResizeAspectRect(state, rawRect);
+          const lockedRect = lockFreeResizeAspectRect(state, rawRect);
           const snapped = snapFreeResizeRect(state, lockedRect);
-          const finalRect = lockAttachmentResizeAspectRect(state, snapped);
+          const finalRect = lockFreeResizeAspectRect(state, snapped);
           setGuideLines(snapped.guides);
           return {
             x: finalRect.x,
@@ -5095,7 +5095,7 @@ function BlockEditorCanvas({
       startItemY: stackItemY(item),
       startW,
       startH,
-      resizeAspectRatio: item.type === "attachment" && startH ? startW / startH : null,
+      resizeAspectRatio: startH ? startW / startH : null,
       shiftKey: event.shiftKey,
       stageWidth: rect.width,
       startScrollX: window.scrollX,
