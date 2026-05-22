@@ -18,10 +18,33 @@ const DEFAULT_STACK_ATTACHMENT_WIDTH = 0.78;
 const DEFAULT_STACK_ATTACHMENT_HEIGHT = 0.5;
 const STACK_TEXT_ITEM_TYPE = "text";
 const MIN_STACK_ITEM_RATIO = 0.02;
-const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body", "introduction"]);
+const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["body"]);
+const DETAIL_FIXED_INTRO_FIELD_IDS = new Set(["text", "intro", "introduction"]);
+
+function isFixedIntroFieldId(fieldId) {
+  return DETAIL_FIXED_INTRO_FIELD_IDS.has(String(fieldId || "").trim());
+}
+
+function legacyIntroFieldIdFromTextId(rawId, validFieldIds = null) {
+  const match = String(rawId || "").trim().match(/^legacy-(text|intro|introduction)(?:-\d+)?$/);
+  if (!match) return "";
+  if (!validFieldIds) return match[1];
+  if (validFieldIds.has(match[1])) return match[1];
+  return ["intro", "text", "introduction"].find((fieldId) => validFieldIds.has(fieldId)) || "";
+}
+
+function legacyIntroductionTextFromLayout(contentLayout) {
+  if (!Array.isArray(contentLayout?.items)) return "";
+  const legacyItem = contentLayout.items.find((item) => (
+    item?.type === STACK_TEXT_ITEM_TYPE
+    && legacyIntroFieldIdFromTextId(item.id)
+    && stackTextValue(item).trim()
+  ));
+  return legacyItem ? stackTextValue(legacyItem) : "";
+}
 
 function legacyContentFieldIdFromTextId(rawId, validFieldIds = null) {
-  const match = String(rawId || "").trim().match(/^legacy-(text|intro|body|introduction)(?:-\d+)?$/);
+  const match = String(rawId || "").trim().match(/^legacy-(body)(?:-\d+)?$/);
   const fieldId = match?.[1] || "";
   if (!fieldId || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)) return "";
   if (validFieldIds && !validFieldIds.has(fieldId)) return "";
@@ -317,6 +340,12 @@ function normalizeStackContentLayout(value, fieldIds = [], attachments = []) {
   const attachmentItems = normalizeAttachmentList(attachments);
   const validAttachmentUrls = new Set(attachmentItems.map((attachment) => attachment.url));
   const inputItems = Array.isArray(value?.items) ? value.items : [];
+  const legacyIntroTexts = new Set(
+    inputItems
+      .filter((item) => item?.type === STACK_TEXT_ITEM_TYPE && legacyIntroFieldIdFromTextId(item.id, validFieldIds))
+      .map((item) => stackTextValue(item).replace(/\s+/g, " ").trim())
+      .filter(Boolean),
+  );
   const seenTextIds = new Set();
   const seenTextSignatures = new Set();
   const seenLegacyContentFields = new Set();
@@ -336,10 +365,12 @@ function normalizeStackContentLayout(value, fieldIds = [], attachments = []) {
       if (type === "attachment" && !validAttachmentUrls.has(id)) return null;
       if (type === STACK_TEXT_ITEM_TYPE) {
         const text = stackTextValue(item);
+        if (legacyIntroFieldIdFromTextId(id, validFieldIds)) return null;
         if (isDuplicateTextLayoutItem(id, text, seenTextSignatures)) return null;
         const legacyFieldId = legacyContentFieldIdFromTextId(id, validFieldIds);
         if (legacyFieldId) {
           const legacyText = text.replace(/\s+/g, " ").trim();
+          if (legacyFieldId === "body" && legacyIntroTexts.has(legacyText)) return null;
           if (legacyText) {
             if (seenLegacyContentTexts.has(legacyText)) return null;
             seenLegacyContentTexts.add(legacyText);
@@ -505,12 +536,13 @@ function normalizeBoardItem(item, fallback = {}, moduleKey = "news", fieldIds = 
   const storedMediaLayout = Object.hasOwn(source, "mediaLayout") ? source.mediaLayout : fallback.mediaLayout;
   const mediaLayout = storedMediaLayout ? normalizeMediaLayout(storedMediaLayout, attachmentFields.attachments) : null;
   const contentLayout = normalizeContentLayout(source.contentLayout || fallback.contentLayout, fieldIds, attachmentFields.attachments);
+  const recoveredIntro = legacyIntroductionTextFromLayout(source.contentLayout || fallback.contentLayout);
   return {
     id: source.id || makeId(title),
     title,
     date: source.date || fallback.date || "",
     createdAt: source.createdAt || fallback.createdAt || "",
-    intro: source.intro || source.text || fallback.intro || "",
+    intro: source.intro || source.text || fallback.intro || recoveredIntro || "",
     people: source.people || fallback.people || "",
     ...attachmentFields,
     cover: normalizeCover(source.cover || fallback.cover, attachmentFields.attachments),
@@ -585,12 +617,13 @@ function normalizeWork(item = {}, fieldIds = [], options = {}) {
   const attachmentFields = withAttachmentFields(source, "image");
   const mediaLayout = source.mediaLayout ? normalizeMediaLayout(source.mediaLayout, attachmentFields.attachments) : null;
   const contentLayout = normalizeContentLayout(source.contentLayout, fieldIds, attachmentFields.attachments);
+  const recoveredIntro = legacyIntroductionTextFromLayout(source.contentLayout);
   return {
     id: source.id || makeId(title),
     title,
     date: source.date || "",
     createdAt: source.createdAt || "",
-    text: source.text || source.intro || "",
+    text: source.text || source.intro || recoveredIntro || "",
     people: source.people || "",
     ...attachmentFields,
     cover: normalizeCover(source.cover, attachmentFields.attachments),

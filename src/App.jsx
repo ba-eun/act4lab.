@@ -359,10 +359,33 @@ const DETAIL_THUMBNAIL_QUERY_PARAMS = new Set([
   "w",
   "width",
 ]);
-const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body", "introduction"]);
+const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["body"]);
+const DETAIL_FIXED_INTRO_FIELD_IDS = new Set(["text", "intro", "introduction"]);
+
+function isFixedIntroFieldId(fieldId) {
+  return DETAIL_FIXED_INTRO_FIELD_IDS.has(String(fieldId || "").trim());
+}
+
+function legacyIntroFieldIdFromTextId(rawId, validFieldIds = null) {
+  const match = String(rawId || "").trim().match(/^legacy-(text|intro|introduction)(?:-\d+)?$/);
+  if (!match) return "";
+  if (!validFieldIds) return match[1];
+  if (validFieldIds.has(match[1])) return match[1];
+  return ["intro", "text", "introduction"].find((fieldId) => validFieldIds.has(fieldId)) || "";
+}
+
+function legacyIntroductionTextFromLayout(contentLayout, targetFieldId = "") {
+  if (!isFixedIntroFieldId(targetFieldId) || !Array.isArray(contentLayout?.items)) return "";
+  const legacyItem = contentLayout.items.find((item) => (
+    item?.type === STACK_TEXT_ITEM_TYPE
+    && legacyIntroFieldIdFromTextId(item.id)
+    && hasText(stackTextValue(item))
+  ));
+  return legacyItem ? stackTextValue(legacyItem) : "";
+}
 
 function legacyContentFieldIdFromTextId(rawId, validFieldIds = null) {
-  const match = String(rawId || "").trim().match(/^legacy-(text|intro|body|introduction)(?:-\d+)?$/);
+  const match = String(rawId || "").trim().match(/^legacy-(body)(?:-\d+)?$/);
   const fieldId = match?.[1] || "";
   if (!fieldId || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)) return "";
   if (validFieldIds && !validFieldIds.has(fieldId)) return "";
@@ -410,7 +433,9 @@ function fieldLabelFor(content, key, fallback = DEFAULT_FIELD_LABELS[key] || key
 
 function fieldValueFor(item = {}, moduleKey, field) {
   const nativeKey = moduleFieldNativeKey(moduleKey, field.id);
-  return nativeKey ? item?.[nativeKey] || "" : item?.customFields?.[field.id] || "";
+  const value = nativeKey ? item?.[nativeKey] || "" : item?.customFields?.[field.id] || "";
+  if (hasText(value)) return value;
+  return legacyIntroductionTextFromLayout(item?.contentLayout, field.id);
 }
 
 function withFieldValue(item = {}, moduleKey, field, value) {
@@ -444,6 +469,7 @@ const DETAIL_FIXED_NATIVE_FIELD_IDS = new Set(["title", "date", "people", "categ
 function isFixedDetailInfoField(moduleKey, field) {
   if (!field?.id) return false;
   if (DETAIL_FIXED_NATIVE_FIELD_IDS.has(field.id)) return true;
+  if (isFixedIntroFieldId(field.id)) return true;
   if (DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id)) return Boolean(field.custom);
   return !moduleFieldNativeKey(moduleKey, field.id);
 }
@@ -1099,6 +1125,12 @@ function normalizeStackContentLayout(value, fields = [], attachments = []) {
   const attachmentItems = normalizeAttachmentList(attachments);
   const attachmentIds = new Set(attachmentItems.map((attachment) => attachment.url));
   const inputItems = Array.isArray(value?.items) ? value.items : [];
+  const legacyIntroTexts = new Set(
+    inputItems
+      .filter((item) => item?.type === STACK_TEXT_ITEM_TYPE && legacyIntroFieldIdFromTextId(item.id, fieldIds))
+      .map((item) => stackTextValue(item).replace(/\s+/g, " ").trim())
+      .filter(Boolean),
+  );
   const seenTextItemIds = new Set();
   const seenTextSignatures = new Set();
   const seenLegacyContentFields = new Set();
@@ -1126,10 +1158,12 @@ function normalizeStackContentLayout(value, fields = [], attachments = []) {
       if (type === "attachment" && !attachmentIds.has(id)) return null;
       if (type === STACK_TEXT_ITEM_TYPE) {
         const text = stackTextValue(item);
+        if (legacyIntroFieldIdFromTextId(id, fieldIds)) return null;
         if (isDuplicateTextLayoutItem(id, text, seenTextSignatures)) return null;
         const legacyFieldId = legacyContentFieldIdFromTextId(id, fieldIds);
         if (legacyFieldId) {
           const legacyText = text.replace(/\s+/g, " ").trim();
+          if (legacyFieldId === "body" && legacyIntroTexts.has(legacyText)) return null;
           if (legacyText) {
             if (seenLegacyContentTexts.has(legacyText)) return null;
             seenLegacyContentTexts.add(legacyText);
@@ -1225,11 +1259,28 @@ function createDefaultEditorStackItemsFrom(items = [], attachments = []) {
 
 function normalizeEditorStackContentLayout(value, fields = [], attachments = []) {
   const fieldMap = new Map(fields.map((field) => [field.id, field]));
+  const fieldIds = new Set(fields.map((field) => field.id));
   const contentFieldIds = new Set(fields.map((field) => field.id).filter((fieldId) => DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)));
+  const introFieldTexts = new Set(
+    fields
+      .filter((field) => isFixedIntroFieldId(field.id))
+      .map((field) => String(field.value || "").replace(/\s+/g, " ").trim())
+      .filter(Boolean),
+  );
+  const duplicatesIntroFieldText = (field) => {
+    const value = String(field?.value || "").replace(/\s+/g, " ").trim();
+    return field?.id === "body" && value && introFieldTexts.has(value);
+  };
   const attachmentItems = normalizeAttachmentList(attachments);
   const attachmentIds = new Set(attachmentItems.map((attachment) => attachment.url));
   const hasExplicitStackItems = value?.mode === STACK_LAYOUT_MODE && Array.isArray(value.items);
   const inputItems = Array.isArray(value?.items) ? value.items : [];
+  const legacyIntroTexts = new Set(
+    inputItems
+      .filter((item) => item?.type === STACK_TEXT_ITEM_TYPE && legacyIntroFieldIdFromTextId(item.id, fieldIds))
+      .map((item) => stackTextValue(item).replace(/\s+/g, " ").trim())
+      .filter(Boolean),
+  );
   let fallbackIndex = 0;
   const seenTextIds = new Set();
   const seenTextSignatures = new Set();
@@ -1271,10 +1322,12 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
       }
       if (type === STACK_TEXT_ITEM_TYPE) {
         const text = stackTextValue(item);
+        if (legacyIntroFieldIdFromTextId(rawId, fieldIds)) return null;
         if (isDuplicateTextLayoutItem(rawId, text, seenTextSignatures)) return null;
         const legacyFieldId = legacyContentFieldIdFromTextId(rawId, contentFieldIds);
         if (legacyFieldId) {
           const legacyText = text.replace(/\s+/g, " ").trim();
+          if (legacyFieldId === "body" && legacyIntroTexts.has(legacyText)) return null;
           if (legacyText) {
             if (seenLegacyContentTexts.has(legacyText)) return null;
             seenLegacyContentTexts.add(legacyText);
@@ -1300,7 +1353,7 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
         };
       }
       const field = fieldMap.get(rawId);
-      if (!field || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id) || !hasText(field.value)) return null;
+      if (!field || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id) || !hasText(field.value) || duplicatesIntroFieldText(field)) return null;
       const legacyText = String(field.value || "").replace(/\s+/g, " ").trim();
       if (legacyText) {
         if (seenLegacyContentTexts.has(legacyText)) return null;
@@ -1331,7 +1384,7 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
   let nextY = freeLayoutBottom(compactedItems);
   let nextZ = compactedItems.reduce((maxZ, item) => Math.max(maxZ, stackItemZ(item, maxZ + 1)), 0) + 1;
   const missingTextItems = hasExplicitStackItems ? [] : fields
-    .filter((field) => DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id) && hasText(field.value) && !seenLegacyContentFields.has(field.id) && !seenTextIds.has(`legacy-${field.id}`))
+    .filter((field) => DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id) && hasText(field.value) && !duplicatesIntroFieldText(field) && !seenLegacyContentFields.has(field.id) && !seenTextIds.has(`legacy-${field.id}`))
     .map((field, index) => {
       const item = {
         ...defaultStackLayoutItem(STACK_TEXT_ITEM_TYPE, `legacy-${field.id}`, nextRow + index),
