@@ -325,6 +325,7 @@ const MIN_STACK_ITEM_RATIO = 0.02;
 const MIN_FREE_ITEM_PIXEL_SIZE = 24;
 const PUBLIC_FREE_CANVAS_BOTTOM_GAP = 0.05;
 const PUBLIC_FILE_ATTACHMENT_HEIGHT = 0.04;
+const FREE_RESIZE_HANDLES = Object.freeze(["nw", "n", "ne", "e", "se", "s", "sw", "w"]);
 const ATTACHMENT_NATURAL_SIZE_TIMEOUT = 2500;
 const UPLOADED_ATTACHMENT_MAX_WIDTH_RATIO = 0.65;
 const FREE_COLLISION_GAP = 0.004;
@@ -1085,6 +1086,17 @@ function stackItemFontSize(item) {
   return Number.isFinite(value) ? clamp(value, 10, 72) : null;
 }
 
+function stackItemHasManualSize(item) {
+  return item?.manualSize === true;
+}
+
+function heightRatioMapsEqual(left = {}, right = {}) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((key) => Math.abs((left[key] || 0) - (right[key] || 0)) < 0.0005);
+}
+
 function compactStackRows(items = []) {
   const groups = [];
   items.forEach((item, index) => {
@@ -1187,6 +1199,7 @@ function normalizeStackContentLayout(value, fields = [], attachments = []) {
           h: stackItemHeight({ ...item, type }),
           z: stackItemZ(item, fallbackZ),
           ...(fontSize ? { fontSize } : {}),
+          ...(stackItemHasManualSize(item) ? { manualSize: true } : {}),
         };
       }
       if (type === "field") {
@@ -1350,6 +1363,7 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
           h: stackItemHeight({ ...item, type }),
           z: stackItemZ(item, index + 1),
           ...(fontSize ? { fontSize } : {}),
+          ...(stackItemHasManualSize(item) ? { manualSize: true } : {}),
         };
       }
       const field = fieldMap.get(rawId);
@@ -1376,6 +1390,7 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
         h: stackItemHeight({ ...item, type: STACK_TEXT_ITEM_TYPE }),
         z: stackItemZ(item, index + 1),
         ...(fontSize ? { fontSize } : {}),
+        ...(stackItemHasManualSize(item) ? { manualSize: true } : {}),
       };
     })
     .filter(Boolean);
@@ -2524,12 +2539,43 @@ function isLightboxVideoSeekPoint(target, event) {
   return null;
 }
 
+const lightboxPendingSeekProgress = new WeakMap();
+const lightboxExpectedSeekTime = new WeakMap();
+const lightboxActiveSeekToken = new WeakMap();
+
+function clearLightboxPlaybackFragment(video) {
+  if (!video) return;
+  try {
+    const sourceUrl = video.currentSrc || video.src || "";
+    if (!sourceUrl) return;
+    const parsed = new URL(sourceUrl, window.location.href);
+    if (!parsed.hash || parsed.hash.slice(1) !== VIDEO_PLAYBACK_SEEK_FRAGMENT) return;
+    parsed.hash = "";
+    const nextUrl = parsed.toString();
+    if (video.src === nextUrl) return;
+    video.autoplay = false;
+    video.removeAttribute("autoplay");
+    video.src = nextUrl;
+    video.load();
+    video.pause();
+  } catch {}
+}
+
 function seekLightboxVideo(video, rect, clientX) {
-  const duration = Number(video?.duration);
-  if (!video || !Number.isFinite(duration) || duration <= 0) return null;
+  if (!video) return null;
   if (!rect.width) return null;
   const progress = clamp((clientX - rect.left) / rect.width, 0, 1);
+  lightboxActiveSeekToken.delete(video);
+  const duration = Number(video.duration);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    clearLightboxPlaybackFragment(video);
+    lightboxPendingSeekProgress.set(video, progress);
+    setLightboxSeekProgress(video, progress);
+    return null;
+  }
+  lightboxPendingSeekProgress.delete(video);
   const targetTime = duration * progress;
+  lightboxExpectedSeekTime.set(video, targetTime);
   video.currentTime = targetTime;
   setLightboxSeekProgress(video, progress);
   return targetTime;
@@ -2550,6 +2596,15 @@ function syncLightboxSeekProgress(video) {
   const currentTime = Number(video?.currentTime);
   if (!video || !Number.isFinite(duration) || duration <= 0 || !Number.isFinite(currentTime)) {
     setLightboxSeekProgress(video, 0);
+    return;
+  }
+  const pendingProgress = lightboxPendingSeekProgress.get(video);
+  if (Number.isFinite(pendingProgress)) {
+    lightboxPendingSeekProgress.delete(video);
+    const targetTime = duration * clamp(pendingProgress, 0, 1);
+    lightboxExpectedSeekTime.set(video, targetTime);
+    video.currentTime = targetTime;
+    setLightboxSeekProgress(video, pendingProgress);
     return;
   }
   setLightboxSeekProgress(video, currentTime / duration);
@@ -2587,31 +2642,96 @@ function removeLightboxScrubListeners(move, up) {
   });
 }
 
-function resumeLightboxVideo(video, targetTime = null) {
+function resumeLightboxVideo(video, targetTime = null, targetProgress = null) {
   if (!video) return;
   let settled = false;
-  const finalTime = Number(targetTime);
-  const keepTarget = () => {
-    if (!Number.isFinite(finalTime)) return;
-    if (Math.abs(Number(video.currentTime) - finalTime) < 0.35) return;
-    video.currentTime = finalTime;
+  let timer = null;
+  const finalTime = targetTime == null ? NaN : Number(targetTime);
+  const finalProgress = targetProgress == null ? NaN : Number(targetProgress);
+  const hasDuration = () => {
+    const duration = Number(video.duration);
+    return Number.isFinite(duration) && duration > 0;
+  };
+  const seekToken = {};
+  lightboxActiveSeekToken.set(video, seekToken);
+  const isCurrentSeek = () => lightboxActiveSeekToken.get(video) === seekToken && document.body.contains(video);
+  const resolvedFinalTime = () => {
+    if (Number.isFinite(finalTime)) return finalTime;
+    const expectedTime = lightboxExpectedSeekTime.get(video);
+    if (Number.isFinite(expectedTime)) return expectedTime;
+    const duration = Number(video.duration);
+    if (Number.isFinite(finalProgress) && Number.isFinite(duration) && duration > 0) {
+      return duration * clamp(finalProgress, 0, 1);
+    }
+    return null;
+  };
+  const keepTarget = (onlyIfBehind = false) => {
+    const nextTime = resolvedFinalTime();
+    if (!Number.isFinite(nextTime)) return false;
+    lightboxExpectedSeekTime.set(video, nextTime);
+    const currentTime = Number(video.currentTime);
+    const shouldCorrect = onlyIfBehind
+      ? currentTime < nextTime - 0.35
+      : Math.abs(currentTime - nextTime) >= 0.35;
+    if (shouldCorrect) {
+      video.currentTime = nextTime;
+    }
     syncLightboxSeekProgress(video);
+    return true;
   };
   const play = () => {
-    if (settled) return;
+    if (settled || !isCurrentSeek()) return;
     settled = true;
     video.removeEventListener("seeked", play);
-    window.clearTimeout(timer);
+    video.removeEventListener("loadedmetadata", playWhenDurationReady);
+    video.removeEventListener("durationchange", playWhenDurationReady);
+    video.removeEventListener("loadeddata", playWhenDurationReady);
+    video.removeEventListener("canplay", playWhenDurationReady);
+    if (timer) window.clearTimeout(timer);
     keepTarget();
     const playPromise = video.play();
-    window.setTimeout(keepTarget, 40);
-    window.setTimeout(keepTarget, 180);
+    const keepIfCurrent = (onlyIfBehind = false) => {
+      if (isCurrentSeek()) keepTarget(onlyIfBehind);
+    };
+    [40, 180].forEach((delay) => window.setTimeout(() => keepIfCurrent(false), delay));
+    [700, 1400, 2400, 4200, 6400, 8200].forEach((delay) => window.setTimeout(() => keepIfCurrent(true), delay));
+    if (!Number.isFinite(finalTime) && Number.isFinite(finalProgress)) {
+      const startedAt = window.performance.now();
+      const guard = window.setInterval(() => {
+        if (window.performance.now() - startedAt > 9000 || !isCurrentSeek()) {
+          window.clearInterval(guard);
+          return;
+        }
+        keepTarget(true);
+      }, 120);
+    }
     playPromise?.then?.(() => {
-      window.setTimeout(keepTarget, 0);
-      window.setTimeout(keepTarget, 120);
+      window.setTimeout(() => keepIfCurrent(false), 0);
+      window.setTimeout(() => keepIfCurrent(false), 120);
     }).catch(() => {});
   };
-  const timer = window.setTimeout(play, 180);
+  const playAfterSeek = () => {
+    if (settled || !isCurrentSeek()) return;
+    keepTarget(false);
+    if (video.seeking) {
+      timer = window.setTimeout(play, 1200);
+      video.addEventListener("seeked", play, { once: true });
+      return;
+    }
+    window.requestAnimationFrame(() => window.requestAnimationFrame(play));
+  };
+  const playWhenDurationReady = () => {
+    if (hasDuration()) playAfterSeek();
+  };
+  const shouldWaitForDuration = !Number.isFinite(finalTime) && Number.isFinite(finalProgress) && !hasDuration();
+  if (shouldWaitForDuration) {
+    video.addEventListener("loadedmetadata", playWhenDurationReady, { once: true });
+    video.addEventListener("durationchange", playWhenDurationReady, { once: true });
+    video.addEventListener("loadeddata", playWhenDurationReady, { once: true });
+    video.addEventListener("canplay", playWhenDurationReady, { once: true });
+    return;
+  }
+  timer = window.setTimeout(play, 180);
   if (video.seeking) {
     video.addEventListener("seeked", play, { once: true });
   } else {
@@ -2641,8 +2761,11 @@ function useLightboxVideoControls() {
     scrubRef.current = null;
     state.host?.classList.remove("is-video-scrubbing");
     const finalClientX = validLightboxScrubClientX(state.rect, clientX) ?? state.lastClientX;
+    const targetProgress = finalClientX !== null && state.rect.width
+      ? clamp((finalClientX - state.rect.left) / state.rect.width, 0, 1)
+      : null;
     const targetTime = finalClientX !== null ? seekLightboxVideo(state.video, state.rect, finalClientX) : null;
-    if (state.shouldResume) resumeLightboxVideo(state.video, targetTime);
+    if (state.shouldResume) resumeLightboxVideo(state.video, targetTime, targetProgress);
   }, []);
 
   const startScrub = useCallback((event) => {
@@ -4383,6 +4506,7 @@ function BlockEditorCanvas({
   const [fileUploading, setFileUploading] = useState(false);
   const [activeTextKey, setActiveTextKey] = useState("");
   const [guideLines, setGuideLines] = useState([]);
+  const [textAutoHeights, setTextAutoHeights] = useState({});
   const [nudgingKeys, setNudgingKeys] = useState(() => new Set());
   const freeStageRef = useRef(null);
   const freeInteractionRef = useRef(null);
@@ -4397,9 +4521,14 @@ function BlockEditorCanvas({
     value: Object.hasOwn(values, field.id) ? values[field.id] : field.value,
   }));
   const workingLayout = normalizeEditorStackContentLayout(layout, layoutFields, normalizedAttachments);
-  const items = workingLayout.items;
-  const commitItems = (nextItems) => onLayoutChange({ mode: STACK_LAYOUT_MODE, items: nextItems });
   const itemKey = (item) => `${item.type}:${item.id}`;
+  const items = workingLayout.items.map((item) => {
+    if (item.type !== STACK_TEXT_ITEM_TYPE || stackItemHasManualSize(item)) return item;
+    const measuredHeight = Number(textAutoHeights[itemKey(item)]);
+    if (!Number.isFinite(measuredHeight) || measuredHeight <= 0) return item;
+    return { ...item, h: Math.max(stackItemHeight(item), measuredHeight) };
+  });
+  const commitItems = (nextItems) => onLayoutChange({ mode: STACK_LAYOUT_MODE, items: nextItems });
   const legacyTextFieldId = (id) => {
     const validFieldIds = new Set(layoutFields.map((field) => field.id));
     return legacyContentFieldIdFromTextId(id, validFieldIds);
@@ -4484,6 +4613,54 @@ function BlockEditorCanvas({
       valueTarget?.focus();
     });
   }, [items]);
+  useLayoutEffect(() => {
+    const stage = freeStageRef.current;
+    if (!stage) {
+      setTextAutoHeights((current) => (Object.keys(current).length ? {} : current));
+      return undefined;
+    }
+    let frame = 0;
+    const manualTextKeys = new Set(
+      items
+        .filter((item) => item.type === STACK_TEXT_ITEM_TYPE && stackItemHasManualSize(item))
+        .map(itemKey),
+    );
+    const measure = () => {
+      const stageWidth = stage.getBoundingClientRect().width;
+      if (!stageWidth) return;
+      const nextHeights = {};
+      stage.querySelectorAll(".block-editor-free-item.is-text[data-block-key]").forEach((node) => {
+        const key = node.getAttribute("data-block-key") || "";
+        if (!key || manualTextKeys.has(key)) return;
+        const valueNode = node.querySelector(".admin-block-value");
+        const style = window.getComputedStyle(node);
+        const paddingY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+        const contentHeight = Math.max(
+          valueNode?.scrollHeight || 0,
+          valueNode?.getBoundingClientRect().height || 0,
+        );
+        const measuredHeight = Math.ceil(contentHeight + paddingY);
+        if (measuredHeight > 0) {
+          nextHeights[key] = clamp(measuredHeight / stageWidth, MIN_STACK_ITEM_RATIO, 3);
+        }
+      });
+      setTextAutoHeights((current) => (heightRatioMapsEqual(current, nextHeights) ? current : nextHeights));
+    };
+    const scheduleMeasure = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(measure);
+    };
+    scheduleMeasure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleMeasure) : null;
+    observer?.observe(stage);
+    stage.querySelectorAll(".block-editor-free-item.is-text .admin-block-value").forEach((node) => observer?.observe(node));
+    window.addEventListener("resize", scheduleMeasure);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", scheduleMeasure);
+    };
+  }, [items, freeStageRatio]);
   const updateTextBlock = (item, text) => {
     const nextText = normalizeEditableText(text);
     const fieldId = legacyTextFieldId(item.id);
@@ -4641,9 +4818,6 @@ function BlockEditorCanvas({
     maxWidth: 1,
     maxHeight: 3,
   });
-  const boundedResizeValue = (value, min, max) => {
-    return clamp(value, min, max);
-  };
   const smoothSnapValue = (currentValue, targetValue, distance, threshold) => {
     if (threshold <= 0) return targetValue;
     const progress = clamp(1 - (distance / threshold), 0, 1);
@@ -4651,17 +4825,99 @@ function BlockEditorCanvas({
     const maxStep = threshold;
     return currentValue + clamp((targetValue - currentValue) * eased, -maxStep, maxStep);
   };
-  const lockAttachmentResizeAspect = (state, nextW, nextH) => {
-    if (state.item.type !== "attachment" || !state.shiftKey || !state.resizeAspectRatio) {
-      return { w: nextW, h: nextH };
-    }
+  const normalizedResizeHandle = (handle = "se") => (FREE_RESIZE_HANDLES.includes(handle) ? handle : "se");
+  const resizeEdgesForHandle = (handle = "se") => {
+    const normalized = normalizedResizeHandle(handle);
+    return {
+      left: normalized.includes("w"),
+      right: normalized.includes("e"),
+      top: normalized.includes("n"),
+      bottom: normalized.includes("s"),
+    };
+  };
+  const constrainFreeResizeBox = (state, box) => {
     const { minWidth, minHeight, maxWidth, maxHeight } = freeResizeBounds(state.item, state.stageWidth);
+    const edges = state.resizeEdges || resizeEdgesForHandle(state.resizeHandle);
+    let { left, top, right, bottom } = box;
+    if (edges.left && !edges.right) {
+      left = clamp(left, Math.max(0, right - maxWidth), right - minWidth);
+    } else if (edges.right && !edges.left) {
+      right = clamp(right, left + minWidth, Math.min(1, left + maxWidth));
+    } else {
+      const width = clamp(right - left, minWidth, maxWidth);
+      const center = (left + right) / 2;
+      left = clamp(center - (width / 2), 0, Math.max(0, 1 - width));
+      right = left + width;
+    }
+    if (edges.top && !edges.bottom) {
+      top = clamp(top, Math.max(0, bottom - maxHeight), bottom - minHeight);
+    } else if (edges.bottom && !edges.top) {
+      bottom = clamp(bottom, top + minHeight, top + maxHeight);
+    } else {
+      const height = clamp(bottom - top, minHeight, maxHeight);
+      const center = (top + bottom) / 2;
+      top = Math.max(0, center - (height / 2));
+      bottom = top + height;
+    }
+    top = clamp(top, 0, 48);
+    bottom = Math.max(top + minHeight, Math.min(top + maxHeight, bottom));
+    return {
+      x: left,
+      y: top,
+      w: right - left,
+      h: bottom - top,
+    };
+  };
+  const freeResizeBoxFromRect = (rect) => ({
+    left: rect.x,
+    top: rect.y,
+    right: rect.x + rect.w,
+    bottom: rect.y + rect.h,
+  });
+  const freeResizeRectFromDelta = (state, deltaX, deltaY) => {
+    const edges = state.resizeEdges || resizeEdgesForHandle(state.resizeHandle);
+    const startRight = state.startItemX + state.startW;
+    const startBottom = state.startItemY + state.startH;
+    return constrainFreeResizeBox(state, {
+      left: state.startItemX + (edges.left ? deltaX : 0),
+      right: startRight + (edges.right ? deltaX : 0),
+      top: state.startItemY + (edges.top ? deltaY : 0),
+      bottom: startBottom + (edges.bottom ? deltaY : 0),
+    });
+  };
+  const freeResizeRectFromAnchoredSize = (state, nextW, nextH) => {
+    const edges = state.resizeEdges || resizeEdgesForHandle(state.resizeHandle);
+    const startRight = state.startItemX + state.startW;
+    const startBottom = state.startItemY + state.startH;
+    const centerX = state.startItemX + (state.startW / 2);
+    const centerY = state.startItemY + (state.startH / 2);
+    return constrainFreeResizeBox(state, {
+      left: edges.left ? startRight - nextW : edges.right ? state.startItemX : centerX - (nextW / 2),
+      right: edges.left ? startRight : edges.right ? state.startItemX + nextW : centerX + (nextW / 2),
+      top: edges.top ? startBottom - nextH : edges.bottom ? state.startItemY : centerY - (nextH / 2),
+      bottom: edges.top ? startBottom : edges.bottom ? state.startItemY + nextH : centerY + (nextH / 2),
+    });
+  };
+  const lockAttachmentResizeAspectRect = (state, rect) => {
+    if (state.item.type !== "attachment" || !state.shiftKey || !state.resizeAspectRatio) return rect;
+    const { minWidth, minHeight, maxWidth, maxHeight } = freeResizeBounds(state.item, state.stageWidth);
+    const edges = state.resizeEdges || resizeEdgesForHandle(state.resizeHandle);
     const ratio = state.resizeAspectRatio;
-    const deltaW = nextW - state.startW;
-    const deltaH = nextH - state.startH;
-    const projectedDeltaH = ((deltaW * ratio) + deltaH) / ((ratio * ratio) + 1);
-    let lockedH = state.startH + projectedDeltaH;
-    let lockedW = state.startW + (projectedDeltaH * ratio);
+    const horizontal = edges.left || edges.right;
+    const vertical = edges.top || edges.bottom;
+    let lockedW = rect.w;
+    let lockedH = rect.h;
+    if (horizontal && !vertical) {
+      lockedH = lockedW / ratio;
+    } else if (!horizontal && vertical) {
+      lockedW = lockedH * ratio;
+    } else {
+      const deltaW = rect.w - state.startW;
+      const deltaH = rect.h - state.startH;
+      const projectedDeltaH = ((deltaW * ratio) + deltaH) / ((ratio * ratio) + 1);
+      lockedH = state.startH + projectedDeltaH;
+      lockedW = state.startW + (projectedDeltaH * ratio);
+    }
     if (lockedW > maxWidth) {
       lockedW = maxWidth;
       lockedH = lockedW / ratio;
@@ -4678,107 +4934,55 @@ function BlockEditorCanvas({
       lockedH = minHeight;
       lockedW = lockedH * ratio;
     }
-    return {
-      w: clamp(lockedW, minWidth, maxWidth),
-      h: clamp(lockedH, minHeight, maxHeight),
-    };
+    return freeResizeRectFromAnchoredSize(state, clamp(lockedW, minWidth, maxWidth), clamp(lockedH, minHeight, maxHeight));
   };
-  const snapFreeResize = (state, nextW, nextH) => {
+  const snapFreeResizeRect = (state, rect) => {
     const threshold = 5 / state.stageWidth;
+    const edges = state.resizeEdges || resizeEdgesForHandle(state.resizeHandle);
     const others = state.baseItems.filter((entry) => itemKey(entry) !== itemKey(state.item));
-    const { minWidth, minHeight, maxWidth, maxHeight } = freeResizeBounds(state.item, state.stageWidth);
-    const originX = state.startItemX;
-    const originY = state.startItemY;
-    let snappedW = nextW;
-    let snappedH = nextH;
+    const xTargets = [{ value: 0 }, { value: 1 }];
+    const yTargets = [{ value: 0 }];
+    let snapped = rect;
     let bestX = threshold + 1;
     let bestY = threshold + 1;
     const guides = [];
-    const xCandidates = (x, width) => [
-      { value: x, ratio: 0 },
-      { value: x + (width / 2), ratio: 0.5 },
-      { value: x + width, ratio: 1 },
-    ];
-    const yCandidates = (y, height) => [
-      { value: y, ratio: 0 },
-      { value: y + (height / 2), ratio: 0.5 },
-      { value: y + height, ratio: 1 },
-    ];
-
     others.forEach((entry) => {
       const otherX = stackItemX(entry);
       const otherY = stackItemY(entry);
       const otherWidth = stackItemWidth(entry, entry.type);
       const otherHeight = stackItemHeight(entry);
-      xCandidates(originX, snappedW).filter((current) => current.ratio > 0).forEach((current) => {
-        xCandidates(otherX, otherWidth).forEach((target) => {
-          const distance = Math.abs(current.value - target.value);
-          const candidateWidth = (target.value - originX) / current.ratio;
-          if (candidateWidth < minWidth || candidateWidth > maxWidth) return;
-          if (distance <= threshold && distance < bestX) {
-            bestX = distance;
-            snappedW = smoothSnapValue(snappedW, candidateWidth, distance, threshold);
-            guides.push({ axis: "x", kind: "align", position: target.value });
-          }
-        });
-      });
-      yCandidates(originY, snappedH).filter((current) => current.ratio > 0).forEach((current) => {
-        yCandidates(otherY, otherHeight).forEach((target) => {
-          const distance = Math.abs(current.value - target.value);
-          const candidateHeight = (target.value - originY) / current.ratio;
-          if (candidateHeight < minHeight || candidateHeight > maxHeight) return;
-          if (distance <= threshold && distance < bestY) {
-            bestY = distance;
-            snappedH = smoothSnapValue(snappedH, candidateHeight, distance, threshold);
-            guides.push({ axis: "y", kind: "align", position: target.value });
-          }
-        });
-      });
+      xTargets.push({ value: otherX }, { value: otherX + (otherWidth / 2) }, { value: otherX + otherWidth });
+      yTargets.push({ value: otherY }, { value: otherY + (otherHeight / 2) }, { value: otherY + otherHeight });
     });
-
-    const leftItems = others
-      .map((entry) => ({ left: stackItemX(entry), right: stackItemX(entry) + stackItemWidth(entry, entry.type) }))
-      .filter((entry) => entry.right <= originX)
-      .sort((left, right) => right.right - left.right);
-    const rightItems = others
-      .map((entry) => ({ left: stackItemX(entry), right: stackItemX(entry) + stackItemWidth(entry, entry.type) }))
-      .filter((entry) => entry.left >= originX + snappedW)
-      .sort((left, right) => left.left - right.left);
-    if (leftItems[0] && rightItems[0]) {
-      const leftGap = originX - leftItems[0].right;
-      const targetWidth = rightItems[0].left - leftGap - originX;
-      const distance = Math.abs((originX + targetWidth) - (originX + snappedW));
-      if (targetWidth >= minWidth && targetWidth <= maxWidth && distance <= threshold) {
-        snappedW = smoothSnapValue(snappedW, targetWidth, distance, threshold);
-        guides.push(
-          { axis: "x", kind: "spacing", position: leftItems[0].right },
-          { axis: "x", kind: "spacing", position: rightItems[0].left },
-        );
-      }
-    }
-
-    const upperItems = others
-      .map((entry) => ({ top: stackItemY(entry), bottom: stackItemY(entry) + stackItemHeight(entry) }))
-      .filter((entry) => entry.bottom <= originY)
-      .sort((left, right) => right.bottom - left.bottom);
-    const lowerItems = others
-      .map((entry) => ({ top: stackItemY(entry), bottom: stackItemY(entry) + stackItemHeight(entry) }))
-      .filter((entry) => entry.top >= originY + snappedH)
-      .sort((left, right) => left.top - right.top);
-    if (upperItems[0] && lowerItems[0]) {
-      const upperGap = originY - upperItems[0].bottom;
-      const targetHeight = lowerItems[0].top - upperGap - originY;
-      const distance = Math.abs((originY + targetHeight) - (originY + snappedH));
-      if (targetHeight >= minHeight && targetHeight <= maxHeight && distance <= threshold) {
-        snappedH = smoothSnapValue(snappedH, targetHeight, distance, threshold);
-        guides.push(
-          { axis: "y", kind: "spacing", position: upperItems[0].bottom },
-          { axis: "y", kind: "spacing", position: lowerItems[0].top },
-        );
-      }
-    }
-
-    return { w: snappedW, h: snappedH, guides: uniqueGuides(guides) };
+    const snapXEdge = (edge) => {
+      const edgeValue = edge === "left" ? snapped.x : snapped.x + snapped.w;
+      xTargets.forEach((target) => {
+        const distance = Math.abs(edgeValue - target.value);
+        if (distance > threshold || distance >= bestX) return;
+        const box = freeResizeBoxFromRect(snapped);
+        box[edge] = smoothSnapValue(edgeValue, target.value, distance, threshold);
+        snapped = constrainFreeResizeBox(state, box);
+        bestX = distance;
+        guides.push({ axis: "x", kind: "align", position: target.value });
+      });
+    };
+    const snapYEdge = (edge) => {
+      const edgeValue = edge === "top" ? snapped.y : snapped.y + snapped.h;
+      yTargets.forEach((target) => {
+        const distance = Math.abs(edgeValue - target.value);
+        if (distance > threshold || distance >= bestY) return;
+        const box = freeResizeBoxFromRect(snapped);
+        box[edge] = smoothSnapValue(edgeValue, target.value, distance, threshold);
+        snapped = constrainFreeResizeBox(state, box);
+        bestY = distance;
+        guides.push({ axis: "y", kind: "align", position: target.value });
+      });
+    };
+    if (edges.left) snapXEdge("left");
+    if (edges.right) snapXEdge("right");
+    if (edges.top) snapYEdge("top");
+    if (edges.bottom) snapYEdge("bottom");
+    return { ...snapped, guides: uniqueGuides(guides) };
   };
   const applyFreeInteraction = (clientX = null, clientY = null) => {
     const state = freeInteractionRef.current;
@@ -4795,20 +4999,17 @@ function BlockEditorCanvas({
     const key = itemKey(state.item);
     const nextPatch = state.mode === "resize"
       ? (() => {
-          const { minWidth, minHeight, maxWidth, maxHeight } = freeResizeBounds(state.item, state.stageWidth);
-          const resized = lockAttachmentResizeAspect(
-            state,
-            boundedResizeValue(state.startW + deltaX, minWidth, maxWidth),
-            boundedResizeValue(state.startH + deltaY, minHeight, maxHeight),
-          );
-          const snapped = snapFreeResize(state, resized.w, resized.h);
-          const finalSize = lockAttachmentResizeAspect(state, snapped.w, snapped.h);
+          const rawRect = freeResizeRectFromDelta(state, deltaX, deltaY);
+          const lockedRect = lockAttachmentResizeAspectRect(state, rawRect);
+          const snapped = snapFreeResizeRect(state, lockedRect);
+          const finalRect = lockAttachmentResizeAspectRect(state, snapped);
           setGuideLines(snapped.guides);
           return {
-            x: state.startItemX,
-            y: state.startItemY,
-            w: finalSize.w,
-            h: finalSize.h,
+            x: finalRect.x,
+            y: finalRect.y,
+            w: finalRect.w,
+            h: finalRect.h,
+            ...(state.item.type === STACK_TEXT_ITEM_TYPE ? { manualSize: true } : {}),
           };
         })()
       : (() => {
@@ -4866,12 +5067,13 @@ function BlockEditorCanvas({
     stopAutoScroll();
     if (nudgeTimeoutRef.current) window.clearTimeout(nudgeTimeoutRef.current);
   }, []);
-  const beginResize = (event, item) => {
+  const beginResize = (event, item, handle = "se") => {
     event.preventDefault();
     event.stopPropagation();
     const rect = freeStageRef.current?.getBoundingClientRect();
     if (!rect?.width) return;
     const key = itemKey(item);
+    const resizeHandle = normalizedResizeHandle(handle);
     const nextZ = Math.max(maxFreeZ + 1, stackItemZ(item));
     const baseItems = items.map((entry) => (itemKey(entry) === key ? { ...entry, z: nextZ } : entry));
     if (nextZ !== stackItemZ(item)) commitItems(baseItems);
@@ -4881,6 +5083,8 @@ function BlockEditorCanvas({
     freeInteractionRef.current = {
       pointerId: event.pointerId,
       mode: "resize",
+      resizeHandle,
+      resizeEdges: resizeEdgesForHandle(resizeHandle),
       startX: event.clientX,
       startY: event.clientY,
       lastX: event.clientX,
@@ -5010,6 +5214,17 @@ function BlockEditorCanvas({
     if (!window.confirm("确定要重置当前详情页布局吗？")) return;
     commitItems(createDefaultEditorStackItemsFrom(items, normalizedAttachments));
   };
+  const renderResizeHandles = (item, label) => (
+    FREE_RESIZE_HANDLES.map((handle) => (
+      <button
+        type="button"
+        className={`block-resize-handle is-${handle}`}
+        aria-label={`${label} ${handle}`}
+        key={handle}
+        onPointerDown={(event) => beginResize(event, item, handle)}
+      />
+    ))
+  );
 
   return (
     <section
@@ -5072,15 +5287,18 @@ function BlockEditorCanvas({
           };
           if (item.type === STACK_TEXT_ITEM_TYPE) {
             const fontSize = stackItemFontSize(item);
+            const hasManualSize = stackItemHasManualSize(item);
             return (
               <section
-                className={`block-editor-free-item is-field is-text ${activeTextKey === key ? "is-active" : ""} ${nudgingKeys.has(key) ? "is-nudging" : ""}`.trim()}
+                className={`block-editor-free-item is-field is-text ${hasManualSize ? "has-manual-size" : ""} ${activeTextKey === key ? "is-active" : ""} ${nudgingKeys.has(key) ? "is-nudging" : ""}`.trim()}
                 key={key}
                 data-block-key={key}
                 onPointerDown={(event) => beginFreeMove(event, item)}
                 style={{
                   ...sharedStyle,
-                  height: `${(stackItemHeight(item) / freeStageRatio) * 100}%`,
+                  ...(hasManualSize
+                    ? { height: `${(stackItemHeight(item) / freeStageRatio) * 100}%` }
+                    : { minHeight: `${(stackItemHeight(item) / freeStageRatio) * 100}%` }),
                   "--block-font-size": fontSize ? `${fontSize}px` : undefined,
                 }}
               >
@@ -5113,12 +5331,7 @@ function BlockEditorCanvas({
                   onChange={(value) => updateTextBlock(item, value)}
                   placeholder="输入文本..."
                 />
-                <button
-                  type="button"
-                  className="block-resize-handle"
-                  aria-label="调整文字块大小"
-                  onPointerDown={(event) => beginResize(event, item)}
-                />
+                {renderResizeHandles(item, "Resize text block")}
               </section>
             );
           }
@@ -5145,12 +5358,7 @@ function BlockEditorCanvas({
                 </button>
               </div>
               <AttachmentPreview value={attachment} interactive={false} showName={!isVisualAttachment(attachment)} cropped={false} />
-              <button
-                type="button"
-                className="block-resize-handle"
-                aria-label="调整附件大小"
-                onPointerDown={(event) => beginResize(event, item)}
-              />
+              {renderResizeHandles(item, "Resize attachment")}
             </section>
           );
         })}
@@ -6302,6 +6510,8 @@ function normalizeDetailFields(fields = []) {
 
 function PublicContentLayout({ fields = [], attachments = [], contentLayout, modalAttachments = true, renderFieldItems = true, tightStage = false, videoPoster = null }) {
   const [activeStackAttachment, setActiveStackAttachment] = useState(null);
+  const publicStackStageRef = useRef(null);
+  const [measuredPublicStageRatio, setMeasuredPublicStageRatio] = useState(0);
   const attachmentItems = normalizeAttachmentList(attachments);
   const visualItems = attachmentItems.filter(isVisualAttachment);
   const layoutFields = normalizeDetailFields(fields);
@@ -6310,6 +6520,40 @@ function PublicContentLayout({ fields = [], attachments = [], contentLayout, mod
     layoutFields.map((field) => ({ id: field.id })),
     contentLayout?.mode === STACK_LAYOUT_MODE ? attachmentItems : visualItems,
   );
+  useLayoutEffect(() => {
+    const stage = publicStackStageRef.current;
+    if (!stage || normalized?.mode !== STACK_LAYOUT_MODE) {
+      setMeasuredPublicStageRatio((current) => (current ? 0 : current));
+      return undefined;
+    }
+    let frame = 0;
+    const measure = () => {
+      const stageRect = stage.getBoundingClientRect();
+      if (!stageRect.width) return;
+      let bottom = 0;
+      stage.querySelectorAll(".public-free-item").forEach((node) => {
+        const rect = node.getBoundingClientRect();
+        bottom = Math.max(bottom, rect.bottom - stageRect.top);
+      });
+      const gap = bottom ? stageRect.width * (tightStage ? PUBLIC_FREE_CANVAS_BOTTOM_GAP : 0.08) : 0;
+      const nextRatio = bottom ? (bottom + gap) / stageRect.width : 0;
+      setMeasuredPublicStageRatio((current) => (Math.abs(current - nextRatio) < 0.0005 ? current : nextRatio));
+    };
+    const scheduleMeasure = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(measure);
+    };
+    scheduleMeasure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleMeasure) : null;
+    observer?.observe(stage);
+    stage.querySelectorAll(".public-free-item").forEach((node) => observer?.observe(node));
+    window.addEventListener("resize", scheduleMeasure);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", scheduleMeasure);
+    };
+  });
   if (!normalized) return null;
   if (normalized.mode === STACK_LAYOUT_MODE) {
     const attachmentMap = new Map(attachmentItems.map((attachment) => [attachment.url, attachment]));
@@ -6328,12 +6572,13 @@ function PublicContentLayout({ fields = [], attachments = [], contentLayout, mod
     const publicItemHeight = (item) => (
       publicStackItemHeight(item, tightStage, item.type === "attachment" ? attachmentMap.get(item.id) : null)
     );
-    const stageRatio = publicFreeLayoutStageRatio(stageItems, tightStage, publicItemHeight);
+    const baseStageRatio = publicFreeLayoutStageRatio(stageItems, tightStage, publicItemHeight);
+    const stageRatio = Math.max(baseStageRatio, measuredPublicStageRatio);
     const displayedItems = tightStage ? stageItems : renderItems;
     return (
       <>
       <div className={`public-stack-layout ${tightStage ? "is-tight" : ""}`.trim()}>
-        <div className="public-free-stage" style={{ aspectRatio: `1 / ${stageRatio}` }}>
+        <div className="public-free-stage" ref={publicStackStageRef} style={{ aspectRatio: `1 / ${stageRatio}` }}>
           {displayedItems.slice().sort((left, right) => stackItemZ(left) - stackItemZ(right)).map((item) => {
             const sharedStyle = {
               left: `${stackItemX(item) * 100}%`,

@@ -466,6 +466,10 @@ function stackItemFontSize(item) {
   return Number.isFinite(value) ? clamp(value, 10, 72) : null;
 }
 
+function stackItemHasManualSize(item) {
+  return item?.manualSize === true;
+}
+
 function compactStackRows(items = []) {
   const groups = [];
   items.forEach((item, index) => {
@@ -537,6 +541,7 @@ function normalizeStackContentLayout(value, fieldIds = [], attachments = []) {
           h: stackItemHeight({ ...item, type }),
           z: stackItemZ(item, fallbackZ),
           ...(fontSize ? { fontSize } : {}),
+          ...(stackItemHasManualSize(item) ? { manualSize: true } : {}),
         };
       }
       if (type === "field") {

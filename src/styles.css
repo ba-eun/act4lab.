@@ -4723,16 +4723,23 @@ button.attachment-preview {
 }
 
 .block-editor-free-item.is-text .admin-block-value.is-multiline {
-  height: 100%;
-  max-height: 100%;
-  min-height: 0;
+  height: auto;
+  max-height: none;
+  min-height: 1.3em;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
   color: inherit;
   font-family: inherit;
   font-weight: inherit;
   letter-spacing: inherit;
   line-height: inherit;
+}
+
+.block-editor-free-item.is-text.has-manual-size .admin-block-value.is-multiline {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .block-editor-free-item.is-text .admin-block-value.is-multiline[data-editable="true"] {
@@ -4741,16 +4748,100 @@ button.attachment-preview {
 
 .block-resize-handle {
   position: absolute;
-  right: -6px;
-  bottom: -6px;
   z-index: 6;
-  width: 32px;
-  height: 32px;
+  width: 18px;
+  height: 18px;
   border: 0;
-  background:
-    linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, 0.68) 46%, rgba(255, 255, 255, 0.68) 54%, transparent 55%);
+  padding: 0;
+  background: transparent;
   opacity: 0;
+  touch-action: none;
+}
+
+.block-resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 1px;
+  background: rgba(5, 6, 7, 0.72);
+  box-shadow: 0 0 0 1px rgba(5, 6, 7, 0.42);
+}
+
+.block-resize-handle.is-nw {
+  top: -8px;
+  left: -8px;
   cursor: nwse-resize;
+}
+
+.block-resize-handle.is-ne {
+  top: -8px;
+  right: -8px;
+  cursor: nesw-resize;
+}
+
+.block-resize-handle.is-se {
+  right: -8px;
+  bottom: -8px;
+  cursor: nwse-resize;
+}
+
+.block-resize-handle.is-sw {
+  bottom: -8px;
+  left: -8px;
+  cursor: nesw-resize;
+}
+
+.block-resize-handle.is-n,
+.block-resize-handle.is-s {
+  right: 18px;
+  left: 18px;
+  width: auto;
+  height: 16px;
+  cursor: ns-resize;
+}
+
+.block-resize-handle.is-n {
+  top: -8px;
+}
+
+.block-resize-handle.is-s {
+  bottom: -8px;
+}
+
+.block-resize-handle.is-e,
+.block-resize-handle.is-w {
+  top: 18px;
+  bottom: 18px;
+  width: 16px;
+  height: auto;
+  cursor: ew-resize;
+}
+
+.block-resize-handle.is-e {
+  right: -8px;
+}
+
+.block-resize-handle.is-w {
+  left: -8px;
+}
+
+.block-resize-handle.is-n::after,
+.block-resize-handle.is-s::after {
+  top: 6px;
+  right: calc(50% - 14px);
+  bottom: auto;
+  left: calc(50% - 14px);
+  height: 2px;
+}
+
+.block-resize-handle.is-e::after,
+.block-resize-handle.is-w::after {
+  top: calc(50% - 14px);
+  right: auto;
+  bottom: calc(50% - 14px);
+  left: 6px;
+  width: 2px;
 }
 
 .block-editor-item:hover .block-resize-handle,
