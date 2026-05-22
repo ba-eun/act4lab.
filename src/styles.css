@@ -4084,6 +4084,31 @@ button.attachment-preview {
   width: min(460px, 100%);
 }
 
+.detail-fixed-info-actions .block-editor-add-field > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid var(--soft-line);
+  border-radius: 6px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.84);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.detail-fixed-info-actions .block-editor-add-field > button:hover {
+  border-color: var(--primary-2);
+  background: rgba(158, 203, 255, 0.1);
+  color: #fff;
+}
+
+.detail-fixed-info-actions .block-editor-add-field > button:active {
+  transform: translateY(1px);
+}
+
 .people-form-editor {
   width: min(1080px, 100%);
 }

@@ -444,7 +444,7 @@ const DETAIL_FIXED_NATIVE_FIELD_IDS = new Set(["title", "date", "people", "categ
 function isFixedDetailInfoField(moduleKey, field) {
   if (!field?.id) return false;
   if (DETAIL_FIXED_NATIVE_FIELD_IDS.has(field.id)) return true;
-  if (DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id)) return false;
+  if (DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id)) return Boolean(field.custom);
   return !moduleFieldNativeKey(moduleKey, field.id);
 }
 
