@@ -18,6 +18,15 @@ const DEFAULT_STACK_ATTACHMENT_WIDTH = 0.78;
 const DEFAULT_STACK_ATTACHMENT_HEIGHT = 0.5;
 const STACK_TEXT_ITEM_TYPE = "text";
 const MIN_STACK_ITEM_RATIO = 0.02;
+const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body"]);
+
+function legacyContentFieldIdFromTextId(rawId, validFieldIds = null) {
+  const match = String(rawId || "").trim().match(/^legacy-(text|intro|body)(?:-\d+)?$/);
+  const fieldId = match?.[1] || "";
+  if (!fieldId || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)) return "";
+  if (validFieldIds && !validFieldIds.has(fieldId)) return "";
+  return fieldId;
+}
 
 function normalizePeopleCategory(value) {
   const normalized = String(value || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
@@ -310,6 +319,8 @@ function normalizeStackContentLayout(value, fieldIds = [], attachments = []) {
   const inputItems = Array.isArray(value?.items) ? value.items : [];
   const seenTextIds = new Set();
   const seenTextSignatures = new Set();
+  const seenLegacyContentFields = new Set();
+  const seenLegacyContentTexts = new Set();
   let attachmentIndex = 0;
   let fieldIndex = 0;
   const normalizedItems = inputItems
@@ -326,6 +337,16 @@ function normalizeStackContentLayout(value, fieldIds = [], attachments = []) {
       if (type === STACK_TEXT_ITEM_TYPE) {
         const text = stackTextValue(item);
         if (isDuplicateTextLayoutItem(id, text, seenTextSignatures)) return null;
+        const legacyFieldId = legacyContentFieldIdFromTextId(id, validFieldIds);
+        if (legacyFieldId) {
+          const legacyText = text.replace(/\s+/g, " ").trim();
+          if (legacyText) {
+            if (seenLegacyContentTexts.has(legacyText)) return null;
+            seenLegacyContentTexts.add(legacyText);
+          }
+          if (seenLegacyContentFields.has(legacyFieldId)) return null;
+          seenLegacyContentFields.add(legacyFieldId);
+        }
         const textId = uniqueTextItemId(id, seenTextIds);
         const fallbackY = fieldIndex * DEFAULT_STACK_TEXT_HEIGHT;
         const fallbackZ = fieldIndex + 1;
@@ -377,38 +398,9 @@ function normalizeStackContentLayout(value, fieldIds = [], attachments = []) {
     })
     .filter(Boolean);
   const compactedItems = compactStackRows(normalizedItems);
-  const seen = new Set(compactedItems.map((item) => `${item.type}:${item.id}`));
-  const nextRow = compactedItems.reduce((maxRow, item) => Math.max(maxRow, item.row), -1) + 1;
-  let nextY = freeLayoutBottom(compactedItems);
-  let nextZ = compactedItems.reduce((maxZ, item) => Math.max(maxZ, stackItemZ(item, maxZ + 1)), 0) + 1;
-  const missingFields = fieldIds
-    .filter((fieldId) => !seen.has(`field:${fieldId}`))
-    .map((fieldId, index) => {
-      const item = {
-        ...defaultStackLayoutItem("field", fieldId, nextRow + index),
-        y: nextY,
-        z: nextZ,
-      };
-      nextY += DEFAULT_STACK_FIELD_HEIGHT;
-      nextZ += 1;
-      return item;
-    });
-  const missingAttachments = attachmentItems
-    .filter((attachment) => !seen.has(`attachment:${attachment.url}`))
-    .map((attachment, index) => {
-      const item = {
-        ...defaultStackLayoutItem("attachment", attachment.url, nextRow + missingFields.length + index),
-        x: 0,
-        y: nextY,
-        z: nextZ,
-      };
-      nextY += DEFAULT_STACK_ATTACHMENT_HEIGHT;
-      nextZ += 1;
-      return item;
-    });
   return {
     mode: STACK_LAYOUT_MODE,
-    items: compactStackRows([...compactedItems, ...missingFields, ...missingAttachments]),
+    items: compactedItems,
   };
 }
 

@@ -359,6 +359,15 @@ const DETAIL_THUMBNAIL_QUERY_PARAMS = new Set([
   "w",
   "width",
 ]);
+const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body"]);
+
+function legacyContentFieldIdFromTextId(rawId, validFieldIds = null) {
+  const match = String(rawId || "").trim().match(/^legacy-(text|intro|body)(?:-\d+)?$/);
+  const fieldId = match?.[1] || "";
+  if (!fieldId || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)) return "";
+  if (validFieldIds && !validFieldIds.has(fieldId)) return "";
+  return fieldId;
+}
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, Number(value)));
@@ -430,7 +439,6 @@ function resolveEditorFields(content, moduleKey, item = {}) {
   }));
 }
 
-const DETAIL_CANVAS_CONTENT_FIELD_IDS = new Set(["text", "intro", "body"]);
 const DETAIL_FIXED_NATIVE_FIELD_IDS = new Set(["title", "date", "people", "category"]);
 
 function isFixedDetailInfoField(moduleKey, field) {
@@ -1093,6 +1101,8 @@ function normalizeStackContentLayout(value, fields = [], attachments = []) {
   const inputItems = Array.isArray(value?.items) ? value.items : [];
   const seenTextItemIds = new Set();
   const seenTextSignatures = new Set();
+  const seenLegacyContentFields = new Set();
+  const seenLegacyContentTexts = new Set();
   let attachmentIndex = 0;
   let fieldIndex = 0;
   const normalizedItems = inputItems
@@ -1117,6 +1127,16 @@ function normalizeStackContentLayout(value, fields = [], attachments = []) {
       if (type === STACK_TEXT_ITEM_TYPE) {
         const text = stackTextValue(item);
         if (isDuplicateTextLayoutItem(id, text, seenTextSignatures)) return null;
+        const legacyFieldId = legacyContentFieldIdFromTextId(id, fieldIds);
+        if (legacyFieldId) {
+          const legacyText = text.replace(/\s+/g, " ").trim();
+          if (legacyText) {
+            if (seenLegacyContentTexts.has(legacyText)) return null;
+            seenLegacyContentTexts.add(legacyText);
+          }
+          if (seenLegacyContentFields.has(legacyFieldId)) return null;
+          seenLegacyContentFields.add(legacyFieldId);
+        }
         const textId = uniqueTextItemId(id, seenTextItemIds);
         const fallbackY = fieldIndex * DEFAULT_STACK_TEXT_HEIGHT;
         const fallbackZ = fieldIndex + 1;
@@ -1168,44 +1188,9 @@ function normalizeStackContentLayout(value, fields = [], attachments = []) {
     })
     .filter(Boolean);
   const compactedItems = compactStackRows(normalizedItems);
-  if (!compactedItems.length) {
-    return {
-      mode: STACK_LAYOUT_MODE,
-      items: createDefaultStackItems(fields, attachmentItems),
-    };
-  }
-  const seen = new Set(compactedItems.map((item) => `${item.type}:${item.id}`));
-  const nextRow = compactedItems.reduce((maxRow, item) => Math.max(maxRow, item.row), -1) + 1;
-  let nextY = freeLayoutBottom(compactedItems);
-  let nextZ = compactedItems.reduce((maxZ, item) => Math.max(maxZ, stackItemZ(item, maxZ + 1)), 0) + 1;
-  const missingFields = fields
-    .filter((field) => !seen.has(`field:${field.id}`))
-    .map((field, index) => {
-      const item = {
-        ...defaultStackLayoutItem("field", field.id, nextRow + index),
-        y: nextY,
-        z: nextZ,
-      };
-      nextY += DEFAULT_STACK_FIELD_HEIGHT;
-      nextZ += 1;
-      return item;
-    });
-  const missingAttachments = attachmentItems
-    .filter((attachment) => !seen.has(`attachment:${attachment.url}`))
-    .map((attachment, index) => {
-      const item = {
-        ...defaultStackLayoutItem("attachment", attachment.url, nextRow + missingFields.length + index),
-        x: 0,
-        y: nextY,
-        z: nextZ,
-      };
-      nextY += DEFAULT_STACK_ATTACHMENT_HEIGHT;
-      nextZ += 1;
-      return item;
-    });
   return {
     mode: STACK_LAYOUT_MODE,
-    items: compactStackRows([...compactedItems, ...missingFields, ...missingAttachments]),
+    items: compactedItems,
   };
 }
 
@@ -1240,13 +1225,16 @@ function createDefaultEditorStackItemsFrom(items = [], attachments = []) {
 
 function normalizeEditorStackContentLayout(value, fields = [], attachments = []) {
   const fieldMap = new Map(fields.map((field) => [field.id, field]));
+  const contentFieldIds = new Set(fields.map((field) => field.id).filter((fieldId) => DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)));
   const attachmentItems = normalizeAttachmentList(attachments);
   const attachmentIds = new Set(attachmentItems.map((attachment) => attachment.url));
+  const hasExplicitStackItems = value?.mode === STACK_LAYOUT_MODE && Array.isArray(value.items);
   const inputItems = Array.isArray(value?.items) ? value.items : [];
   let fallbackIndex = 0;
   const seenTextIds = new Set();
   const seenTextSignatures = new Set();
   const seenLegacyContentFields = new Set();
+  const seenLegacyContentTexts = new Set();
   const seenAttachments = new Set();
   const normalizedItems = inputItems
     .slice()
@@ -1284,6 +1272,16 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
       if (type === STACK_TEXT_ITEM_TYPE) {
         const text = stackTextValue(item);
         if (isDuplicateTextLayoutItem(rawId, text, seenTextSignatures)) return null;
+        const legacyFieldId = legacyContentFieldIdFromTextId(rawId, contentFieldIds);
+        if (legacyFieldId) {
+          const legacyText = text.replace(/\s+/g, " ").trim();
+          if (legacyText) {
+            if (seenLegacyContentTexts.has(legacyText)) return null;
+            seenLegacyContentTexts.add(legacyText);
+          }
+          if (seenLegacyContentFields.has(legacyFieldId)) return null;
+          seenLegacyContentFields.add(legacyFieldId);
+        }
         const id = uniqueTextItemId(rawId, seenTextIds);
         const fallbackY = fallbackIndex * DEFAULT_STACK_TEXT_HEIGHT;
         fallbackIndex += 1;
@@ -1303,6 +1301,12 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
       }
       const field = fieldMap.get(rawId);
       if (!field || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id) || !hasText(field.value)) return null;
+      const legacyText = String(field.value || "").replace(/\s+/g, " ").trim();
+      if (legacyText) {
+        if (seenLegacyContentTexts.has(legacyText)) return null;
+        seenLegacyContentTexts.add(legacyText);
+      }
+      if (seenLegacyContentFields.has(field.id)) return null;
       seenLegacyContentFields.add(field.id);
       const id = uniqueTextItemId(`legacy-${field.id}`, seenTextIds);
       const fallbackY = fallbackIndex * DEFAULT_STACK_TEXT_HEIGHT;
@@ -1326,7 +1330,7 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
   let nextRow = compactedItems.reduce((maxRow, item) => Math.max(maxRow, item.row), -1) + 1;
   let nextY = freeLayoutBottom(compactedItems);
   let nextZ = compactedItems.reduce((maxZ, item) => Math.max(maxZ, stackItemZ(item, maxZ + 1)), 0) + 1;
-  const missingTextItems = fields
+  const missingTextItems = hasExplicitStackItems ? [] : fields
     .filter((field) => DETAIL_CANVAS_CONTENT_FIELD_IDS.has(field.id) && hasText(field.value) && !seenLegacyContentFields.has(field.id) && !seenTextIds.has(`legacy-${field.id}`))
     .map((field, index) => {
       const item = {
@@ -1340,7 +1344,7 @@ function normalizeEditorStackContentLayout(value, fields = [], attachments = [])
       return item;
     });
   nextRow += missingTextItems.length;
-  const missingAttachments = attachmentItems
+  const missingAttachments = hasExplicitStackItems ? [] : attachmentItems
     .filter((attachment) => !seenAttachments.has(attachment.url))
     .map((attachment, index) => {
       const item = {
@@ -4339,9 +4343,8 @@ function BlockEditorCanvas({
   const commitItems = (nextItems) => onLayoutChange({ mode: STACK_LAYOUT_MODE, items: nextItems });
   const itemKey = (item) => `${item.type}:${item.id}`;
   const legacyTextFieldId = (id) => {
-    const fieldId = String(id || "").startsWith("legacy-") ? String(id).slice("legacy-".length) : "";
-    if (!fieldId || !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(fieldId)) return "";
-    return layoutFields.some((field) => field.id === fieldId) ? fieldId : "";
+    const validFieldIds = new Set(layoutFields.map((field) => field.id));
+    return legacyContentFieldIdFromTextId(id, validFieldIds);
   };
   const freeStageRatio = editorFreeLayoutStageRatio(items);
   const maxFreeZ = items.reduce((maxZ, item) => Math.max(maxZ, stackItemZ(item, maxZ + 1)), 0);
@@ -6402,6 +6405,9 @@ function DetailArticle({ image, attachments = null, cover = null, mediaLayout = 
   const visualItems = mediaItems.filter(isVisualAttachment);
   const videoPoster = normalizePosterAttachment(cover);
   const usesStackLayout = contentLayout?.mode === STACK_LAYOUT_MODE;
+  const listedFields = usesStackLayout && listFieldsAfterContent
+    ? visibleFields.filter(({ id }) => !DETAIL_CANVAS_CONTENT_FIELD_IDS.has(id))
+    : visibleFields;
   return (
     <AdminEditable as="article" className={className} {...editableProps}>
       {contentLayout ? (
@@ -6426,9 +6432,9 @@ function DetailArticle({ image, attachments = null, cover = null, mediaLayout = 
         </figure>
       ) : null}
       {!usesStackLayout ? <AttachmentInfoBar attachments={mediaItems} simpleLinks={simpleAttachmentLinks} modal={modalAttachments} /> : null}
-      {((!contentLayout || listFieldsAfterContent) && visibleFields.length) ? (
+      {((!contentLayout || listFieldsAfterContent) && listedFields.length) ? (
         <div className="detail-fields">
-          {visibleFields.map(({ id, label, value }) => (
+          {listedFields.map(({ id, label, value }) => (
             <section className="detail-field reveal-item" key={id || label}>
               <span>{label}</span>
               <p>{value}</p>
