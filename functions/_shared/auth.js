@@ -60,8 +60,16 @@ async function sign(value, secret) {
   return base64UrlEncode(signature);
 }
 
+export function resolveSessionSecret(env) {
+  const fallback = env.ALLOW_DEFAULT_ADMIN === "true" || env.CF_PAGES !== "1"
+    ? "change-this-session-secret-before-production"
+    : "";
+  return env.SESSION_SECRET || fallback;
+}
+
 export async function createSessionCookie(env, username) {
-  const secret = env.SESSION_SECRET || "change-this-session-secret-before-production";
+  const secret = resolveSessionSecret(env);
+  if (!secret) throw new Error("SESSION_SECRET is not configured");
   const payload = base64UrlEncode(
     JSON.stringify({
       u: username,
@@ -76,7 +84,8 @@ export async function isAuthenticated(request, env) {
   const token = parseCookies(request).act4_session || "";
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return false;
-  const secret = env.SESSION_SECRET || "change-this-session-secret-before-production";
+  const secret = resolveSessionSecret(env);
+  if (!secret) return false;
   const expected = await sign(payload, secret);
   if (!timingSafeEqual(signature, expected)) return false;
   try {

@@ -1,3 +1,5 @@
+import { defaultFieldSchemas } from "./fieldSchemas.js";
+
 const defaultContent = {
   "site": {
     "topLine": "ACT IV CROSS-MEDIA & MULTIMODAL",
@@ -5,8 +7,10 @@ const defaultContent = {
     "contactEmail": "act4lab@163.com",
     "contactAddress": "\nACT IV 未来视觉研究室",
     "contactDirections": "品牌视觉 / 动态影像 / 交互体验 / AIGC / 跨媒介视觉",
-    "footerTagline": "跨媒介与多模态未来视觉"
+    "footerTagline": "CROSS-MEDIA & MULTIMODAL"
   },
+  "fieldLabels": {},
+  "fieldSchemas": defaultFieldSchemas(),
   "homeIntro": [
     "ACT IV 将“打破第四堵墙”转化为一种未来视觉研究方法：艺术与科技融合，传统视觉语言与前沿媒介对话，设计从平面图像进入屏幕、界面、空间与智能生成场景。",
     "研究室围绕四幕递进展开：静态秩序、动态叙事、交互对话与未来视觉融合。每一幕都可以独立深耕，合在一起则构成完整的跨媒介视觉系统。"

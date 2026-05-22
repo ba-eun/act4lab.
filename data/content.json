@@ -7,6 +7,269 @@
     "contactDirections": "品牌视觉 / 动态影像 / 交互体验 / AIGC / 跨媒介视觉",
     "footerTagline": "跨媒介与多模态未来视觉"
   },
+  "fieldLabels": {},
+  "fieldSchemas": {
+    "contact": [
+      {
+        "id": "address",
+        "zh": "地址",
+        "en": "ADDRESS",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "email",
+        "zh": "邮箱",
+        "en": "EMAIL",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "directions",
+        "zh": "方向",
+        "en": "INTERESTS",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      }
+    ],
+    "people": [
+      {
+        "id": "name",
+        "zh": "名字",
+        "en": "NAME",
+        "type": "text",
+        "protected": true,
+        "custom": false
+      },
+      {
+        "id": "category",
+        "zh": "分类",
+        "en": "CATEGORIES",
+        "type": "select",
+        "protected": true,
+        "custom": false
+      },
+      {
+        "id": "title",
+        "zh": "职位",
+        "en": "APPOINTMENT",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "email",
+        "zh": "邮箱",
+        "en": "EMAIL",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "interests",
+        "zh": "研究方向",
+        "en": "INTERESTS",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "history",
+        "zh": "简介",
+        "en": "INTRODUCTION",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "experience",
+        "zh": "经历",
+        "en": "EXPERIENCE",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "academicAbility",
+        "zh": "学术能力",
+        "en": "ACADEMIC ABILITY",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      }
+    ],
+    "works": [
+      {
+        "id": "title",
+        "zh": "标题",
+        "en": "TITLE",
+        "type": "text",
+        "protected": true,
+        "custom": false
+      },
+      {
+        "id": "people",
+        "zh": "人员",
+        "en": "PEOPLE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "text",
+        "zh": "简介",
+        "en": "INTRODUCTION",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "body",
+        "zh": "正文",
+        "en": "CONTENT",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "date",
+        "zh": "时间",
+        "en": "DATE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      }
+    ],
+    "news": [
+      {
+        "id": "title",
+        "zh": "标题",
+        "en": "TITLE",
+        "type": "text",
+        "protected": true,
+        "custom": false
+      },
+      {
+        "id": "date",
+        "zh": "时间",
+        "en": "DATE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "people",
+        "zh": "人员",
+        "en": "PEOPLE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "intro",
+        "zh": "简介",
+        "en": "INTRODUCTION",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "body",
+        "zh": "正文",
+        "en": "CONTENT",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      }
+    ],
+    "project": [
+      {
+        "id": "title",
+        "zh": "标题",
+        "en": "TITLE",
+        "type": "text",
+        "protected": true,
+        "custom": false
+      },
+      {
+        "id": "date",
+        "zh": "时间",
+        "en": "DATE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "people",
+        "zh": "人员",
+        "en": "PEOPLE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "intro",
+        "zh": "简介",
+        "en": "INTRODUCTION",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "body",
+        "zh": "正文",
+        "en": "CONTENT",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      }
+    ],
+    "publications": [
+      {
+        "id": "title",
+        "zh": "标题",
+        "en": "TITLE",
+        "type": "text",
+        "protected": true,
+        "custom": false
+      },
+      {
+        "id": "date",
+        "zh": "时间",
+        "en": "DATE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "people",
+        "zh": "作者",
+        "en": "PEOPLE",
+        "type": "text",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "intro",
+        "zh": "简介",
+        "en": "INTRODUCTION",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      },
+      {
+        "id": "body",
+        "zh": "正文",
+        "en": "CONTENT",
+        "type": "textarea",
+        "protected": false,
+        "custom": false
+      }
+    ]
+  },
   "homeIntro": [
     "ACT IV 将“打破第四堵墙”转化为一种未来视觉研究方法：艺术与科技融合，传统视觉语言与前沿媒介对话，设计从平面图像进入屏幕、界面、空间与智能生成场景。",
     "研究室围绕四幕递进展开：静态秩序、动态叙事、交互对话与未来视觉融合。每一幕都可以独立深耕，合在一起则构成完整的跨媒介视觉系统。"
@@ -39,27 +302,105 @@
         "id": "future-visual-lab",
         "title": "未来视觉研究室",
         "date": "2026-05",
+        "createdAt": "",
         "intro": "面向数字时代的未来视觉研究室，聚焦视觉系统、动态叙事、交互体验与跨媒介实验。",
         "people": "ACT IV",
-        "image": "/work-1.svg",
+        "attachments": [
+          {
+            "url": "/work-1.svg",
+            "name": "work-1.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-1.svg",
+          "name": "work-1.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-1.svg",
+            "name": "work-1.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "面向数字时代的未来视觉研究室，聚焦视觉系统、动态叙事、交互体验与跨媒介实验。"
       },
       {
         "id": "creative-fusion",
         "title": "创造性融合",
         "date": "ACT 00",
+        "createdAt": "",
         "intro": "以设计思维连接真实场景，让图像、界面、空间与智能生成共同形成可落地的视觉方案。",
         "people": "ACT IV",
-        "image": "/work-2.svg",
+        "attachments": [
+          {
+            "url": "/work-2.svg",
+            "name": "work-2.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-2.svg",
+          "name": "work-2.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-2.svg",
+            "name": "work-2.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "以设计思维连接真实场景，让图像、界面、空间与智能生成共同形成可落地的视觉方案。"
       },
       {
         "id": "beyond-fourth-wall",
         "title": "突破第四堵墙",
         "date": "LAB NOTE",
+        "createdAt": "",
         "intro": "突破屏幕、身体、场域与媒介之间的边界，建立更开放的视觉感知与表达方式。",
         "people": "ACT IV",
-        "image": "/work-3.svg",
+        "attachments": [
+          {
+            "url": "/work-3.svg",
+            "name": "work-3.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-3.svg",
+          "name": "work-3.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-3.svg",
+            "name": "work-3.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "突破屏幕、身体、场域与媒介之间的边界，建立更开放的视觉感知与表达方式。"
       }
     ],
@@ -68,36 +409,140 @@
         "id": "visual-system",
         "title": "品牌与视觉系统",
         "date": "PROJECT 01",
+        "createdAt": "",
         "intro": "品牌识别系统、版式结构、包装逻辑与界面视觉规范。",
         "people": "ACT IV",
-        "image": "/work-1.svg",
+        "attachments": [
+          {
+            "url": "/work-1.svg",
+            "name": "work-1.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-1.svg",
+          "name": "work-1.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-1.svg",
+            "name": "work-1.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "品牌识别系统、版式结构、包装逻辑与界面视觉规范。"
       },
       {
         "id": "motion-narrative",
         "title": "动态视觉叙事",
         "date": "PROJECT 02",
+        "createdAt": "",
         "intro": "动态视觉设计、短视频影像系统、生成式节奏与 MG 动画。",
         "people": "ACT IV",
-        "image": "/work-2.svg",
+        "attachments": [
+          {
+            "url": "/work-2.svg",
+            "name": "work-2.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-2.svg",
+          "name": "work-2.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-2.svg",
+            "name": "work-2.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "动态视觉设计、短视频影像系统、生成式节奏与 MG 动画。"
       },
       {
         "id": "interactive-experience",
         "title": "交互体验原型",
         "date": "PROJECT 03",
+        "createdAt": "",
         "intro": "用户体验研究、交互原型、空间界面与响应式服务流程。",
         "people": "ACT IV",
-        "image": "/work-3.svg",
+        "attachments": [
+          {
+            "url": "/work-3.svg",
+            "name": "work-3.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-3.svg",
+          "name": "work-3.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-3.svg",
+            "name": "work-3.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "用户体验研究、交互原型、空间界面与响应式服务流程。"
       },
       {
         "id": "future-media",
         "title": "未来媒介视觉场",
         "date": "PROJECT 04",
+        "createdAt": "",
         "intro": "AIGC 辅助设计、多模态内容、投影映射与跨媒介视觉场。",
         "people": "ACT IV",
-        "image": "/work-4.svg",
+        "attachments": [
+          {
+            "url": "/work-4.svg",
+            "name": "work-4.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-4.svg",
+          "name": "work-4.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-4.svg",
+            "name": "work-4.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "AIGC 辅助设计、多模态内容、投影映射与跨媒介视觉场。"
       }
     ],
@@ -106,9 +551,35 @@
         "id": "cross-media-method",
         "title": "跨媒介视觉方法",
         "date": "RESEARCH 01",
+        "createdAt": "",
         "intro": "研究图像如何在屏幕、界面、空间与智能生成场景中转换。",
         "people": "ACT IV",
-        "image": "/work-4.svg",
+        "attachments": [
+          {
+            "url": "/work-4.svg",
+            "name": "work-4.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        ],
+        "image": {
+          "url": "/work-4.svg",
+          "name": "work-4.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        },
+        "cover": {
+          "file": {
+            "url": "/work-4.svg",
+            "name": "work-4.svg",
+            "size": 0,
+            "type": "image/svg+xml",
+            "createdAt": ""
+          }
+        },
+        "customFields": {},
         "body": "研究图像如何在屏幕、界面、空间与智能生成场景中转换，并形成可落地的视觉系统。"
       }
     ]
@@ -118,75 +589,459 @@
       "id": "gaze-order",
       "title": "凝视 / 秩序",
       "date": "ACT I",
+      "createdAt": "2026-05-17T14:57:35.952Z",
       "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
       "people": "ACT IV",
-      "image": "/work-1.svg",
-      "body": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。"
+      "attachments": [
+        {
+          "url": "/work-1.svg",
+          "name": "work-1.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "image": {
+        "url": "/work-1.svg",
+        "name": "work-1.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
+      "cover": {
+        "file": {
+          "url": "/work-1.svg",
+          "name": "work-1.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {},
+      "body": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+      "contentLayout": {
+        "mode": "stack",
+        "items": [
+          {
+            "id": "legacy-text",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 0,
+            "x": 0,
+            "y": 0,
+            "w": 0.34,
+            "h": 0.16,
+            "z": 1
+          },
+          {
+            "id": "/work-1.svg",
+            "type": "attachment",
+            "row": 1,
+            "x": 0,
+            "y": 0.22,
+            "w": 0.78,
+            "h": 0.5,
+            "z": 2
+          },
+          {
+            "id": "legacy-text-2",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 2,
+            "x": 0,
+            "y": 1.0799999999999998,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 5
+          },
+          {
+            "id": "legacy-body",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 3,
+            "x": 0,
+            "y": 1.2599999999999998,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 6
+          },
+          {
+            "id": "legacy-text-3",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 4,
+            "x": 0,
+            "y": 1.7999999999999996,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 9
+          },
+          {
+            "id": "legacy-body-2",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 5,
+            "x": 0,
+            "y": 1.9799999999999995,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 10
+          },
+          {
+            "id": "legacy-text-4",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 6,
+            "x": 0,
+            "y": 2.52,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 13
+          },
+          {
+            "id": "legacy-body-3",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 7,
+            "x": 0,
+            "y": 2.7,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 14
+          },
+          {
+            "id": "legacy-text-5",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 8,
+            "x": 0,
+            "y": 3.2400000000000007,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 17
+          },
+          {
+            "id": "legacy-body-4",
+            "type": "text",
+            "text": "品牌识别、版式结构、包装逻辑与界面视觉规范共同建立稳定的视觉语法。",
+            "row": 9,
+            "x": 0,
+            "y": 3.420000000000001,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 18
+          },
+          {
+            "id": "title",
+            "type": "field",
+            "row": 10,
+            "x": 0,
+            "y": 3.600000000000001,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 19
+          },
+          {
+            "id": "people",
+            "type": "field",
+            "row": 11,
+            "x": 0,
+            "y": 3.780000000000001,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 20
+          },
+          {
+            "id": "text",
+            "type": "field",
+            "row": 12,
+            "x": 0,
+            "y": 3.9600000000000013,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 21
+          },
+          {
+            "id": "body",
+            "type": "field",
+            "row": 13,
+            "x": 0,
+            "y": 4.1400000000000015,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 22
+          },
+          {
+            "id": "date",
+            "type": "field",
+            "row": 14,
+            "x": 0,
+            "y": 4.320000000000001,
+            "w": 0.28,
+            "h": 0.18,
+            "z": 23
+          }
+        ]
+      }
     },
     {
       "id": "flow-narrative",
       "title": "流动 / 叙事",
       "date": "ACT II",
+      "createdAt": "",
       "text": "动态视觉、短片节奏、生成动画与声音关系让图像进入时间维度。",
       "people": "ACT IV",
-      "image": "/work-2.svg",
+      "attachments": [
+        {
+          "url": "/work-2.svg",
+          "name": "work-2.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "image": {
+        "url": "/work-2.svg",
+        "name": "work-2.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
+      "cover": {
+        "file": {
+          "url": "/work-2.svg",
+          "name": "work-2.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {},
       "body": "动态视觉、短片节奏、生成动画与声音关系让图像进入时间维度。"
     },
     {
       "id": "dialogue-symbiosis",
       "title": "对话 / 共生",
       "date": "ACT III",
+      "createdAt": "",
       "text": "交互原型、用户路径、空间界面与行为反馈组成可被触发的体验系统。",
       "people": "ACT IV",
-      "image": "/work-3.svg",
+      "attachments": [
+        {
+          "url": "/work-3.svg",
+          "name": "work-3.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "image": {
+        "url": "/work-3.svg",
+        "name": "work-3.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
+      "cover": {
+        "file": {
+          "url": "/work-3.svg",
+          "name": "work-3.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {},
       "body": "交互原型、用户路径、空间界面与行为反馈组成可被触发的体验系统。"
     },
     {
       "id": "breakthrough-fusion",
       "title": "破墙 / 融合",
       "date": "ACT IV",
+      "createdAt": "",
       "text": "AIGC、多模态内容、投影映射与跨媒介叙事连接屏幕之外的视觉现场。",
       "people": "ACT IV",
-      "image": "/work-4.svg",
+      "attachments": [
+        {
+          "url": "/work-4.svg",
+          "name": "work-4.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "image": {
+        "url": "/work-4.svg",
+        "name": "work-4.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
+      "cover": {
+        "file": {
+          "url": "/work-4.svg",
+          "name": "work-4.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {},
       "body": "AIGC、多模态内容、投影映射与跨媒介叙事连接屏幕之外的视觉现场。"
     }
   ],
   "people": [
     {
       "id": "static-visual-system",
-      "photo": "/work-1.svg",
+      "attachments": [
+        {
+          "url": "/work-1.svg",
+          "name": "work-1.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "photo": {
+        "url": "/work-1.svg",
+        "name": "work-1.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
       "name": "静态视觉系统",
+      "category": "members",
+      "title": "",
+      "createdAt": "2026-05-18T01:07:03.950Z",
       "email": "",
       "interests": "品牌、版式、界面与图像秩序",
       "history": "建立品牌、版式、界面与图像秩序的基础语言。",
-      "experience": ""
+      "experience": "",
+      "academicAbility": "",
+      "cover": {
+        "file": {
+          "url": "/work-1.svg",
+          "name": "work-1.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {}
     },
     {
       "id": "motion-narrative",
-      "photo": "/work-2.svg",
+      "attachments": [
+        {
+          "url": "/work-2.svg",
+          "name": "work-2.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "photo": {
+        "url": "/work-2.svg",
+        "name": "work-2.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
       "name": "动态叙事",
+      "category": "members",
+      "title": "",
+      "createdAt": "",
       "email": "",
       "interests": "时间、节奏、声音与生成影像",
       "history": "把图像带入时间、节奏、声音与生成影像的复合关系。",
-      "experience": ""
+      "experience": "",
+      "academicAbility": "",
+      "cover": {
+        "file": {
+          "url": "/work-2.svg",
+          "name": "work-2.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {}
     },
     {
       "id": "interactive-experience",
-      "photo": "/work-3.svg",
+      "attachments": [
+        {
+          "url": "/work-3.svg",
+          "name": "work-3.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "photo": {
+        "url": "/work-3.svg",
+        "name": "work-3.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
       "name": "交互体验",
+      "category": "members",
+      "title": "",
+      "createdAt": "",
       "email": "",
       "interests": "界面、空间与行为反馈",
       "history": "让观看转化为回应，在界面、空间与行为之间建立对话。",
-      "experience": ""
+      "experience": "",
+      "academicAbility": "",
+      "cover": {
+        "file": {
+          "url": "/work-3.svg",
+          "name": "work-3.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {}
     },
     {
       "id": "future-media",
-      "photo": "/work-4.svg",
+      "attachments": [
+        {
+          "url": "/work-4.svg",
+          "name": "work-4.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      ],
+      "photo": {
+        "url": "/work-4.svg",
+        "name": "work-4.svg",
+        "size": 0,
+        "type": "image/svg+xml",
+        "createdAt": ""
+      },
       "name": "未来媒介",
+      "category": "members",
+      "title": "",
+      "createdAt": "",
       "email": "",
       "interests": "AI、多模态、投影映射与跨媒介视觉现场",
       "history": "探索 AI、多模态、投影映射与跨媒介视觉现场。",
-      "experience": ""
+      "experience": "",
+      "academicAbility": "",
+      "cover": {
+        "file": {
+          "url": "/work-4.svg",
+          "name": "work-4.svg",
+          "size": 0,
+          "type": "image/svg+xml",
+          "createdAt": ""
+        }
+      },
+      "customFields": {}
     }
   ],
   "archive": [
@@ -194,5 +1049,7 @@
       "研究室精神",
       "艺术与科技融合，传统与前沿对话，设计与真实场景贯通"
     ]
-  ]
+  ],
+  "manualSort": {},
+  "updatedAt": "2026-05-20T14:58:08.658Z"
 }
