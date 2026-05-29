@@ -2135,8 +2135,21 @@ function canPreviewInDetailModal(attachment) {
 }
 
 const VIDEO_PLAYBACK_CACHE_PARAM = "act4_seek";
-const VIDEO_PLAYBACK_CACHE_VALUE = "20260520";
+const VIDEO_PLAYBACK_CACHE_VALUE = "20260529c";
 const VIDEO_PLAYBACK_SEEK_FRAGMENT = "t=0.001";
+
+function encodeVideoPlaybackKey(key) {
+  try {
+    const bytes = new TextEncoder().encode(key);
+    let binary = "";
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  } catch {
+    return encodeURIComponent(key);
+  }
+}
 
 function videoPlaybackUrl(attachment) {
   const sourceUrl = originalAttachmentUrl(attachment?.url || "");
@@ -2146,9 +2159,11 @@ function videoPlaybackUrl(attachment) {
     const base = typeof window !== "undefined" ? window.location.origin : "https://act4.local";
     const parsed = new URL(sourceUrl, base);
     if (!parsed.pathname.startsWith("/uploads/")) return sourceUrl;
-    parsed.searchParams.set(VIDEO_PLAYBACK_CACHE_PARAM, VIDEO_PLAYBACK_CACHE_VALUE);
-    parsed.hash = VIDEO_PLAYBACK_SEEK_FRAGMENT;
-    return isAbsolute ? parsed.toString() : `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    const playbackUrl = new URL(`/media/${encodeVideoPlaybackKey(parsed.pathname.slice("/uploads/".length))}`, parsed.origin);
+    playbackUrl.search = parsed.search;
+    playbackUrl.searchParams.set(VIDEO_PLAYBACK_CACHE_PARAM, VIDEO_PLAYBACK_CACHE_VALUE);
+    playbackUrl.hash = VIDEO_PLAYBACK_SEEK_FRAGMENT;
+    return isAbsolute ? playbackUrl.toString() : `${playbackUrl.pathname}${playbackUrl.search}${playbackUrl.hash}`;
   } catch {
     return sourceUrl;
   }
@@ -2508,7 +2523,12 @@ function lightboxSeekRect(target) {
 }
 
 function isLightboxVideoSeekPoint(target, event) {
-  if (!target || event.button !== 0) return null;
+  if (!target) return null;
+  const button = Number(event?.button);
+  if (Number.isFinite(button) && button !== 0) return null;
+  const clientX = Number(event?.clientX);
+  const clientY = Number(event?.clientY);
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
   const seekTarget = lightboxSeekRect(target);
   if (!seekTarget) return null;
   const { rect } = seekTarget;
@@ -2518,21 +2538,32 @@ function isLightboxVideoSeekPoint(target, event) {
   const seekLayer = isSeekLayer ? target : host?.querySelector?.(".video-lightbox-seek-layer");
   if (seekLayer) {
     const layerRect = seekLayer.getBoundingClientRect();
+    const trackInset = Math.min(14, Math.max(0, layerRect.width / 3));
+    const trackRect = {
+      left: layerRect.left + trackInset,
+      right: layerRect.right - trackInset,
+      top: layerRect.top,
+      bottom: layerRect.bottom,
+      width: Math.max(1, layerRect.width - (trackInset * 2)),
+      height: layerRect.height,
+    };
+    const hitPaddingX = 8;
+    const hitPaddingY = 12;
     if (
-      event.clientX >= layerRect.left
-      && event.clientX <= layerRect.right
-      && event.clientY >= layerRect.top
-      && event.clientY <= layerRect.bottom
-    ) return seekTarget;
+      clientX >= layerRect.left - hitPaddingX
+      && clientX <= layerRect.right + hitPaddingX
+      && clientY >= layerRect.top - hitPaddingY
+      && clientY <= layerRect.bottom + hitPaddingY
+    ) return { ...seekTarget, rect: trackRect };
   }
   if (isSeekLayer) {
     return null;
   }
-  const yFromBottom = rect.bottom - event.clientY;
+  const yFromBottom = rect.bottom - clientY;
   const seekBand = Math.min(42, Math.max(24, rect.height * 0.08));
   if (
-    event.clientX >= rect.left
-    && event.clientX <= rect.right
+    clientX >= rect.left
+    && clientX <= rect.right
     && yFromBottom >= 6
     && yFromBottom <= seekBand
   ) return seekTarget;
@@ -2543,22 +2574,16 @@ const lightboxPendingSeekProgress = new WeakMap();
 const lightboxExpectedSeekTime = new WeakMap();
 const lightboxActiveSeekToken = new WeakMap();
 
-function clearLightboxPlaybackFragment(video) {
+function primeLightboxVideoMetadata(video) {
   if (!video) return;
-  try {
-    const sourceUrl = video.currentSrc || video.src || "";
-    if (!sourceUrl) return;
-    const parsed = new URL(sourceUrl, window.location.href);
-    if (!parsed.hash || parsed.hash.slice(1) !== VIDEO_PLAYBACK_SEEK_FRAGMENT) return;
-    parsed.hash = "";
-    const nextUrl = parsed.toString();
-    if (video.src === nextUrl) return;
-    video.autoplay = false;
-    video.removeAttribute("autoplay");
-    video.src = nextUrl;
-    video.load();
-    video.pause();
-  } catch {}
+  if (video.preload === "none") {
+    video.preload = "metadata";
+  }
+  if (video.networkState === 0) {
+    try {
+      video.load();
+    } catch {}
+  }
 }
 
 function seekLightboxVideo(video, rect, clientX) {
@@ -2568,7 +2593,7 @@ function seekLightboxVideo(video, rect, clientX) {
   lightboxActiveSeekToken.delete(video);
   const duration = Number(video.duration);
   if (!Number.isFinite(duration) || duration <= 0) {
-    clearLightboxPlaybackFragment(video);
+    primeLightboxVideoMetadata(video);
     lightboxPendingSeekProgress.set(video, progress);
     setLightboxSeekProgress(video, progress);
     return null;
@@ -2619,6 +2644,13 @@ function validLightboxScrubClientX(rect, clientX) {
 }
 
 const LIGHTBOX_SCRUB_EVENT_OPTIONS = { capture: true, passive: false };
+const LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS = { capture: true, passive: false };
+
+function lightboxTouchPoint(event) {
+  const touch = event?.changedTouches?.[0] || event?.touches?.[0];
+  if (!touch) return null;
+  return { clientX: touch.clientX, clientY: touch.clientY, button: 0 };
+}
 
 function addLightboxScrubListeners(move, up) {
   const targets = [window, document].filter(Boolean);
@@ -2639,6 +2671,24 @@ function removeLightboxScrubListeners(move, up) {
     target.removeEventListener("pointercancel", up, LIGHTBOX_SCRUB_EVENT_OPTIONS);
     target.removeEventListener("mousemove", move, LIGHTBOX_SCRUB_EVENT_OPTIONS);
     target.removeEventListener("mouseup", up, LIGHTBOX_SCRUB_EVENT_OPTIONS);
+  });
+}
+
+function addLightboxTouchScrubListeners(move, up) {
+  const targets = [window, document].filter(Boolean);
+  targets.forEach((target) => {
+    target.addEventListener("touchmove", move, LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS);
+    target.addEventListener("touchend", up, LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS);
+    target.addEventListener("touchcancel", up, LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS);
+  });
+}
+
+function removeLightboxTouchScrubListeners(move, up) {
+  const targets = [window, document].filter(Boolean);
+  targets.forEach((target) => {
+    target.removeEventListener("touchmove", move, LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS);
+    target.removeEventListener("touchend", up, LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS);
+    target.removeEventListener("touchcancel", up, LIGHTBOX_TOUCH_SCRUB_EVENT_OPTIONS);
   });
 }
 
@@ -2725,6 +2775,7 @@ function resumeLightboxVideo(video, targetTime = null, targetProgress = null) {
   };
   const shouldWaitForDuration = !Number.isFinite(finalTime) && Number.isFinite(finalProgress) && !hasDuration();
   if (shouldWaitForDuration) {
+    primeLightboxVideoMetadata(video);
     video.addEventListener("loadedmetadata", playWhenDurationReady, { once: true });
     video.addEventListener("durationchange", playWhenDurationReady, { once: true });
     video.addEventListener("loadeddata", playWhenDurationReady, { once: true });
@@ -2757,7 +2808,7 @@ function useLightboxVideoControls() {
   const stopScrub = useCallback((clientX = null) => {
     const state = scrubRef.current;
     if (!state) return;
-    removeLightboxScrubListeners(state.move, state.up);
+    state.cleanup?.();
     scrubRef.current = null;
     state.host?.classList.remove("is-video-scrubbing");
     const finalClientX = validLightboxScrubClientX(state.rect, clientX) ?? state.lastClientX;
@@ -2768,19 +2819,20 @@ function useLightboxVideoControls() {
     if (state.shouldResume) resumeLightboxVideo(state.video, targetTime, targetProgress);
   }, []);
 
-  const startScrub = useCallback((event) => {
+  const startScrub = useCallback((event, startPoint = event, inputType = "pointer") => {
+    if (inputType === "pointer" && event.pointerType === "touch") return false;
     if (scrubRef.current) {
       event.preventDefault();
       event.stopPropagation();
-      return;
+      return true;
     }
-    const seekTarget = isLightboxVideoSeekPoint(event.currentTarget, event);
-    if (!seekTarget) return;
+    const seekTarget = isLightboxVideoSeekPoint(event.currentTarget, startPoint);
+    if (!seekTarget) return false;
     event.preventDefault();
     event.stopPropagation();
     const { video, rect } = seekTarget;
-    const initialClientX = validLightboxScrubClientX(rect, event.clientX);
-    if (initialClientX === null) return;
+    const initialClientX = validLightboxScrubClientX(rect, startPoint?.clientX);
+    if (initialClientX === null) return false;
     const shouldResume = video.autoplay || (!video.paused && !video.ended);
     video.pause();
     const host = lightboxSeekHost(video);
@@ -2788,7 +2840,8 @@ function useLightboxVideoControls() {
     seekLightboxVideo(video, rect, initialClientX);
     const move = (moveEvent) => {
       moveEvent.preventDefault();
-      const nextClientX = validLightboxScrubClientX(rect, moveEvent.clientX);
+      const movePoint = inputType === "touch" ? lightboxTouchPoint(moveEvent) : moveEvent;
+      const nextClientX = validLightboxScrubClientX(rect, movePoint?.clientX);
       if (nextClientX === null) return;
       const state = scrubRef.current;
       if (state) state.lastClientX = nextClientX;
@@ -2796,10 +2849,16 @@ function useLightboxVideoControls() {
     };
     const up = (upEvent) => {
       upEvent.preventDefault();
-      stopScrub(upEvent.clientX);
+      const upPoint = inputType === "touch" ? lightboxTouchPoint(upEvent) : upEvent;
+      stopScrub(upPoint?.clientX ?? null);
     };
-    scrubRef.current = { video, rect, shouldResume, move, up, host, lastClientX: initialClientX };
-    addLightboxScrubListeners(move, up);
+    const cleanup = inputType === "touch"
+      ? () => removeLightboxTouchScrubListeners(move, up)
+      : () => removeLightboxScrubListeners(move, up);
+    scrubRef.current = { video, rect, shouldResume, move, up, host, lastClientX: initialClientX, cleanup };
+    if (inputType === "touch") addLightboxTouchScrubListeners(move, up);
+    else addLightboxScrubListeners(move, up);
+    return true;
   }, [stopScrub]);
 
   useEffect(() => () => {
@@ -2817,7 +2876,9 @@ function useLightboxVideoControls() {
   const onTouchStart = useCallback((event) => {
     stopLightboxMediaEvent(event);
     showTouchSeekControls(event.currentTarget);
-  }, [showTouchSeekControls]);
+    const touchPoint = lightboxTouchPoint(event);
+    if (touchPoint) startScrub(event, touchPoint, "touch");
+  }, [showTouchSeekControls, startScrub]);
 
   return {
     onPointerDownCapture: startScrub,
@@ -2899,6 +2960,7 @@ function AttachmentLightbox({ attachments = [], initialIndex = 0, onClose, porta
                   src={videoPlaybackUrl(activeAttachment)}
                   controls
                   autoPlay
+                  preload="metadata"
                   playsInline
                   {...videoControlProps}
                 />
@@ -3114,6 +3176,7 @@ function VideoLightbox({ attachment, onClose, portal = false }) {
             src={videoPlaybackUrl(attachment)}
             controls
             autoPlay
+            preload="metadata"
             playsInline
             {...videoControlProps}
           />
